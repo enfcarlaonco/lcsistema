@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border border-gray-200 rounded-xl p-5 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-800 text-white font-medium py-2 px-4 rounded-lg
+           transition-colors duration-150 text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg
+           border border-gray-200 transition-colors duration-150 text-sm;
+  }
+
+  .input {
+    @apply w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent
+           placeholder:text-gray-400;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  .badge-conforme {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-success-50 text-success-600;
+  }
+
+  .badge-parcial {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-warning-50 text-warning-600;
+  }
+
+  .badge-nao-conforme {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-danger-50 text-danger-600;
+  }
+}

@@ -1,0 +1,817 @@
+// LC Sistema — Prisma Schema Oficial
+// PostgreSQL + Prisma ORM
+// Versão 1.0 — MVP
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum PerfilUsuario {
+  ADMIN_LC
+  CONSULTOR_LC
+  GESTOR_CLIENTE
+  VISUALIZADOR_CLIENTE
+}
+
+enum TipoServico {
+  HEMODIALISE
+  DIALISE_PERITONEAL
+  TRANSPLANTE_RENAL
+  AMBULATORIO_NEFRO
+  MISTO
+}
+
+enum ModalidadeAtendimento {
+  HD_CRONICO_AMBULATORIAL
+  HD_AGUDO_AMBULATORIAL
+  HD_INTERNADO
+  HD_UTI
+  DP_CAPD
+  DP_DPA
+  DP_TREINAMENTO
+  PRE_TRANSPLANTE
+  POS_TRANSPLANTE
+  CONSERVADOR
+}
+
+enum StatusContrato {
+  ATIVO
+  CONCLUIDO
+  SUSPENSO
+  CANCELADO
+}
+
+enum TipoBloco {
+  IDENTIFICACAO
+  ESTRUTURA_FISICA
+  RECURSOS_HUMANOS
+  PROCESSOS_DOCUMENTOS
+  FATURAMENTO_CUSTOS
+  INDICADORES
+}
+
+enum TipoPergunta {
+  TEXTO
+  NUMERO
+  BOOLEAN
+  SELECAO_UNICA
+  SELECAO_MULTIPLA
+  DATA
+  MOEDA
+  PERCENTUAL
+}
+
+enum StatusQuestionario {
+  NAO_INICIADO
+  EM_ANDAMENTO
+  AGUARDANDO_VALIDACAO
+  VALIDADO
+  REVISAO_NECESSARIA
+}
+
+enum StatusDocumento {
+  PENDENTE
+  ENVIADO
+  EM_AVALIACAO
+  APROVADO
+  REPROVADO
+  DESATUALIZADO
+}
+
+enum RespostaCriterio {
+  SIM
+  PARCIAL
+  NAO
+  NAO_SE_APLICA
+}
+
+enum ClassificacaoScore {
+  CONFORME
+  PARCIAL
+  NAO_CONFORME
+}
+
+enum ClassificacaoFinanceiro {
+  EFICIENTE
+  PARCIALMENTE_EFICIENTE
+  INEFICIENTE
+}
+
+enum NivelNC {
+  NC_I
+  NC_II
+  NC_III
+}
+
+enum StatusNC {
+  ABERTA
+  EM_ANDAMENTO
+  RESOLVIDA
+  CANCELADA
+}
+
+enum PrioridadeAcao {
+  CRITICA
+  ALTA
+  MODERADA
+  BAIXA
+}
+
+enum StatusAcao {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum OrigemAcao {
+  DOCUMENTAL
+  FINANCEIRA
+  INTEGRADA
+  NC_REGULATORIA
+  MANUAL
+}
+
+enum TipoPerda {
+  GLOSA_ADMINISTRATIVA
+  GLOSA_TECNICA
+  GLOSA_LINEAR
+  SUBCODIFICACAO
+  SESSAO_NAO_FATURADA
+  INSUMO_EXCESSIVO
+  OCIOSIDADE
+}
+
+enum TipoGanho {
+  RECUPERACAO_GLOSA
+  CODIGO_NAO_FATURADO
+  REDUCAO_CUSTO_INSUMO
+  AUMENTO_OCUPACAO
+  PADRONIZACAO_PROCESSO
+}
+
+// ─────────────────────────────────────────
+// USUÁRIOS E ACESSO
+// ─────────────────────────────────────────
+
+model Usuario {
+  id           String         @id @default(uuid())
+  nome         String
+  email        String         @unique
+  senha_hash   String
+  perfil       PerfilUsuario
+  cliente_id   String?
+  ativo        Boolean        @default(true)
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+
+  cliente                  Cliente?              @relation(fields: [cliente_id], references: [id])
+  avaliacoes_realizadas    AvaliacaoDocumento[]
+  acoes_responsavel        AcaoCorretiva[]       @relation("ResponsavelAcao")
+  sessoes_consultoria      SessaoConsultoria[]
+  respostas_questionario   RespostaQuestionario[]
+
+  @@map("usuarios")
+}
+
+// ─────────────────────────────────────────
+// CLIENTES E CONTRATOS
+// ─────────────────────────────────────────
+
+model Cliente {
+  id             String       @id @default(uuid())
+  nome           String
+  cnpj           String       @unique
+  cnes           String?
+  tipo_servico   TipoServico
+  cidade         String?
+  estado         String?
+  telefone       String?
+  email_contato  String?
+  status         String       @default("ATIVO")
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  modalidades          ClienteModalidade[]
+  contratos            Contrato[]
+  usuarios             Usuario[]
+  questionarios        Questionario[]
+  documentos_enviados  DocumentoEnviado[]
+  dados_financeiros    DadosFinanceiros[]
+  acoes_corretivas     AcaoCorretiva[]
+  nao_conformidades    NaoConformidade[]
+
+  @@map("clientes")
+}
+
+model ClienteModalidade {
+  id            String                @id @default(uuid())
+  cliente_id    String
+  modalidade    ModalidadeAtendimento
+  ativo         Boolean               @default(true)
+
+  cliente       Cliente               @relation(fields: [cliente_id], references: [id])
+
+  @@unique([cliente_id, modalidade])
+  @@map("cliente_modalidades")
+}
+
+model Contrato {
+  id                    String         @id @default(uuid())
+  cliente_id            String
+  numero                String?
+  data_inicio           DateTime
+  data_fim              DateTime
+  total_horas           Float
+  horas_presenciais     Float          @default(0)
+  horas_online          Float          @default(0)
+  horas_preparo         Float          @default(0)
+  valor_total           Decimal        @db.Decimal(12,2)
+  status                StatusContrato @default(ATIVO)
+  responsavel_lc_id     String?
+  responsavel_cliente   String?
+  observacoes           String?
+  created_at            DateTime       @default(now())
+  updated_at            DateTime       @updatedAt
+
+  cliente               Cliente              @relation(fields: [cliente_id], references: [id])
+  sessoes_consultoria   SessaoConsultoria[]
+  questionarios         Questionario[]
+  documentos_enviados   DocumentoEnviado[]
+  dados_financeiros     DadosFinanceiros[]
+  acoes_corretivas      AcaoCorretiva[]
+
+  @@map("contratos")
+}
+
+model SessaoConsultoria {
+  id              String    @id @default(uuid())
+  contrato_id     String
+  consultor_id    String
+  data            DateTime
+  horas           Float
+  tipo            String    // PRESENCIAL, ONLINE, PREPARO
+  descricao       String?
+  created_at      DateTime  @default(now())
+
+  contrato        Contrato  @relation(fields: [contrato_id], references: [id])
+  consultor       Usuario   @relation(fields: [consultor_id], references: [id])
+
+  @@map("sessoes_consultoria")
+}
+
+// ─────────────────────────────────────────
+// QUESTIONÁRIO ESTRUTURADO (M2)
+// ─────────────────────────────────────────
+
+model BlocoQuestionario {
+  id                    String      @id @default(uuid())
+  tipo                  TipoBloco
+  codigo                String      @unique  // B0, B1, B2, B3, B4, B5
+  titulo                String
+  descricao             String?
+  ordem                 Int
+  obrigatorio           Boolean     @default(true)
+  condicao_ativacao     Json?       // ex: {"modalidades": ["HD", "DP"]}
+  ativo                 Boolean     @default(true)
+
+  perguntas             Pergunta[]
+  progresso             ProgressoBloco[]
+
+  @@map("blocos_questionario")
+}
+
+model Pergunta {
+  id                    String        @id @default(uuid())
+  bloco_id              String
+  codigo                String        @unique  // B0_P01, B1_P03 etc
+  enunciado             String
+  tipo                  TipoPergunta
+  opcoes                Json?         // para SELECAO_UNICA e SELECAO_MULTIPLA
+  obrigatoria           Boolean       @default(true)
+  condicao_exibicao     Json?         // lógica condicional
+  ajuda                 String?       // tooltip/explicação
+  legislacao_referencia String?
+  ordem                 Int
+  ativo                 Boolean       @default(true)
+
+  bloco                 BlocoQuestionario      @relation(fields: [bloco_id], references: [id])
+  respostas             RespostaQuestionario[]
+  regras_nc             RegraNaoConformidade[]
+
+  @@map("perguntas")
+}
+
+model Questionario {
+  id              String              @id @default(uuid())
+  cliente_id      String
+  contrato_id     String
+  status          StatusQuestionario  @default(NAO_INICIADO)
+  blocos_ativos   Json                // array de códigos de bloco ativos
+  pct_completo    Float               @default(0)
+  iniciado_at     DateTime?
+  finalizado_at   DateTime?
+  validado_at     DateTime?
+  created_at      DateTime            @default(now())
+  updated_at      DateTime            @updatedAt
+
+  cliente         Cliente             @relation(fields: [cliente_id], references: [id])
+  contrato        Contrato            @relation(fields: [contrato_id], references: [id])
+  respostas       RespostaQuestionario[]
+  progresso       ProgressoBloco[]
+
+  @@map("questionarios")
+}
+
+model RespostaQuestionario {
+  id                String    @id @default(uuid())
+  questionario_id   String
+  pergunta_id       String
+  respondido_por    String?
+  valor_texto       String?
+  valor_numero      Float?
+  valor_boolean     Boolean?
+  valor_multiplo    Json?
+  respondida_at     DateTime  @default(now())
+
+  questionario      Questionario  @relation(fields: [questionario_id], references: [id])
+  pergunta          Pergunta      @relation(fields: [pergunta_id], references: [id])
+  respondido_por_u  Usuario?      @relation(fields: [respondido_por], references: [id])
+
+  @@unique([questionario_id, pergunta_id])
+  @@map("respostas_questionario")
+}
+
+model ProgressoBloco {
+  id                String    @id @default(uuid())
+  questionario_id   String
+  bloco_id          String
+  total_perguntas   Int
+  respondidas       Int       @default(0)
+  pct_completo      Float     @default(0)
+  bloco_ativo       Boolean   @default(true)
+
+  questionario      Questionario        @relation(fields: [questionario_id], references: [id])
+  bloco             BlocoQuestionario   @relation(fields: [bloco_id], references: [id])
+
+  @@unique([questionario_id, bloco_id])
+  @@map("progresso_blocos")
+}
+
+// ─────────────────────────────────────────
+// MOTOR DE REGRAS (M11) — NÃO CONFORMIDADES
+// ─────────────────────────────────────────
+
+model RegraNaoConformidade {
+  id                String    @id @default(uuid())
+  pergunta_id       String
+  codigo            String    @unique
+  descricao         String
+  operador          String    // EQ, LT, GT, BOOLEAN_FALSE, IN
+  valor_gatilho     String
+  nivel_nc          NivelNC
+  prazo_dias        Int       // 15 para NC_III, 30 para NC_II, 60-90 para NC_I
+  dominio           String    // ESTRUTURA, RH, PROCESSOS, FATURAMENTO, INDICADORES
+  legislacao_ref    String?
+  tipo              String    // OBRIGATORIO, RECOMENDADO
+  ativo             Boolean   @default(true)
+  prioridade        Int       @default(0)
+
+  pergunta          Pergunta  @relation(fields: [pergunta_id], references: [id])
+  ncs_geradas       NaoConformidade[]
+
+  @@map("regras_nao_conformidade")
+}
+
+model NaoConformidade {
+  id              String      @id @default(uuid())
+  cliente_id      String
+  regra_id        String
+  questionario_id String?
+  nivel           NivelNC
+  dominio         String
+  descricao       String
+  prazo_dias      Int
+  prazo_limite    DateTime
+  status          StatusNC    @default(ABERTA)
+  resolvida_at    DateTime?
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+
+  cliente         Cliente                 @relation(fields: [cliente_id], references: [id])
+  regra           RegraNaoConformidade    @relation(fields: [regra_id], references: [id])
+  acoes           AcaoCorretiva[]         @relation("AcaoNC")
+
+  @@map("nao_conformidades")
+}
+
+// ─────────────────────────────────────────
+// MOTOR DOCUMENTAL
+// ─────────────────────────────────────────
+
+model TipoDocumento {
+  id      String  @id @default(uuid())
+  nome    String  @unique
+  // POP, Protocolo, Checklist, Formulário, Instrução Técnica
+
+  documentos_referencia DocumentoReferencia[]
+
+  @@map("tipos_documento")
+}
+
+model DocumentoReferencia {
+  id                    String    @id @default(uuid())
+  nome_documento        String
+  tipo_documento_id     String
+  categoria             String    // ASSISTENCIAL, GERENCIAL, ADMINISTRATIVO
+  processo_relacionado  String?
+  setor                 String?
+  obrigatorio           Boolean   @default(true)
+  ativo                 Boolean   @default(true)
+  observacoes           String?
+
+  tipo_documento        TipoDocumento         @relation(fields: [tipo_documento_id], references: [id])
+  criterios             CriterioValidacao[]
+  modelos_lc            ModeloLC[]
+  documentos_enviados   DocumentoEnviado[]
+
+  @@map("documentos_referencia")
+}
+
+model DimensaoValidacao {
+  id               String   @id @default(uuid())
+  nome_dimensao    String   @unique
+  // Existência, Estrutura, Aplicabilidade, Impacto
+  peso_percentual  Float
+  ordem            Int
+
+  criterios        CriterioValidacao[]
+
+  @@map("dimensoes_validacao")
+}
+
+model CriterioValidacao {
+  id                    String    @id @default(uuid())
+  tipo_documento_id     String?
+  dimensao_id           String
+  nome_criterio         String
+  descricao             String
+  peso                  Float
+  obrigatorio           Boolean   @default(true)
+  ativo                 Boolean   @default(true)
+
+  documento_referencia  DocumentoReferencia?  @relation(fields: [tipo_documento_id], references: [id])
+  dimensao              DimensaoValidacao     @relation(fields: [dimensao_id], references: [id])
+  avaliacoes_criterio   AvaliacaoCriterio[]
+  legislacoes           CriterioLegislacao[]
+
+  @@map("criterios_validacao")
+}
+
+model ModeloLC {
+  id                      String    @id @default(uuid())
+  documento_referencia_id String
+  nome_modelo             String
+  arquivo_url             String
+  versao                  String
+  ativo                   Boolean   @default(true)
+  created_at              DateTime  @default(now())
+
+  documento_referencia    DocumentoReferencia @relation(fields: [documento_referencia_id], references: [id])
+
+  @@map("modelos_lc")
+}
+
+model DocumentoEnviado {
+  id                      String          @id @default(uuid())
+  cliente_id              String
+  contrato_id             String
+  documento_referencia_id String
+  nome_arquivo            String
+  arquivo_url             String
+  versao_informada        String?
+  data_envio              DateTime        @default(now())
+  enviado_por_usuario_id  String?
+  status_documento        StatusDocumento @default(PENDENTE)
+
+  cliente                 Cliente             @relation(fields: [cliente_id], references: [id])
+  contrato                Contrato            @relation(fields: [contrato_id], references: [id])
+  documento_referencia    DocumentoReferencia @relation(fields: [documento_referencia_id], references: [id])
+  avaliacoes              AvaliacaoDocumento[]
+
+  @@map("documentos_enviados")
+}
+
+model AvaliacaoDocumento {
+  id                      String              @id @default(uuid())
+  cliente_id              String
+  contrato_id             String
+  documento_enviado_id    String
+  avaliador_usuario_id    String
+  data_avaliacao          DateTime            @default(now())
+  score_final             Float
+  classificacao           ClassificacaoScore
+  risco_assistencial      String              // ALTO, MEDIO, BAIXO
+  risco_operacional       String
+  risco_regulatorio       String
+  impacto_economico_final String              // ALTO, MEDIO, BAIXO
+  observacao_geral        String?
+
+  documento_enviado       DocumentoEnviado    @relation(fields: [documento_enviado_id], references: [id])
+  avaliador               Usuario             @relation(fields: [avaliador_usuario_id], references: [id])
+  criterios_avaliados     AvaliacaoCriterio[]
+  impactos_integrados     ImpactoIntegrado[]
+  acoes_corretivas        AcaoCorretiva[]     @relation("AcaoDocumental")
+
+  @@map("avaliacoes_documento")
+}
+
+model AvaliacaoCriterio {
+  id                      String            @id @default(uuid())
+  avaliacao_documento_id  String
+  criterio_validacao_id   String
+  resposta                RespostaCriterio
+  pontuacao_obtida        Float
+  comentario              String?
+  evidencia_textual       String?
+
+  avaliacao_documento     AvaliacaoDocumento  @relation(fields: [avaliacao_documento_id], references: [id])
+  criterio_validacao      CriterioValidacao   @relation(fields: [criterio_validacao_id], references: [id])
+
+  @@map("avaliacoes_criterio")
+}
+
+// ─────────────────────────────────────────
+// BASE NORMATIVA
+// ─────────────────────────────────────────
+
+model Legislacao {
+  id          String    @id @default(uuid())
+  codigo      String    @unique  // RDC_11_2014, PT_389_2014
+  titulo      String
+  orgao       String    // ANVISA, MS, COFEN
+  tipo_norma  String    // RDC, PORTARIA, RESOLUCAO, LEI
+  ativo       Boolean   @default(true)
+
+  itens       LegislacaoItem[]
+
+  @@map("legislacoes")
+}
+
+model LegislacaoItem {
+  id              String    @id @default(uuid())
+  legislacao_id   String
+  codigo_item     String
+  descricao_item  String
+  tema            String
+  ativo           Boolean   @default(true)
+
+  legislacao      Legislacao            @relation(fields: [legislacao_id], references: [id])
+  criterios       CriterioLegislacao[]
+
+  @@map("legislacao_itens")
+}
+
+model CriterioLegislacao {
+  id                    String    @id @default(uuid())
+  criterio_validacao_id String
+  legislacao_item_id    String
+
+  criterio_validacao    CriterioValidacao @relation(fields: [criterio_validacao_id], references: [id])
+  legislacao_item       LegislacaoItem    @relation(fields: [legislacao_item_id], references: [id])
+
+  @@unique([criterio_validacao_id, legislacao_item_id])
+  @@map("criterio_legislacao")
+}
+
+// ─────────────────────────────────────────
+// MOTOR FINANCEIRO (M12)
+// ─────────────────────────────────────────
+
+model DadosFinanceiros {
+  // Dados brutos de entrada — preenchidos pelo serviço via questionário ou input mensal
+  id                  String    @id @default(uuid())
+  cliente_id          String
+  contrato_id         String
+  mes_referencia      DateTime  // primeiro dia do mês
+  
+  // Produção
+  pacientes           Int
+  sessoes_realizadas  Int
+  sessoes_faturadas   Int
+  sessoes_perdidas    Int       @default(0)
+  
+  // Financeiro
+  faturamento_bruto   Decimal   @db.Decimal(12,2)
+  total_glosas        Decimal   @db.Decimal(12,2) @default(0)
+  
+  // Custos — separados para cálculo preciso
+  custo_insumos       Decimal   @db.Decimal(12,2)
+  custo_mao_obra      Decimal   @db.Decimal(12,2)
+  custo_manutencao    Decimal   @db.Decimal(12,2) @default(0)
+  custo_agua          Decimal   @db.Decimal(12,2) @default(0)
+  outros_custos       Decimal   @db.Decimal(12,2) @default(0)
+  
+  // Estrutura operacional
+  maquinas            Int
+  turnos_dia          Int
+  dias_funcionamento  Int
+  
+  fonte_pagadora      String    @default("SUS") // SUS, CONVENIO, MISTO
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  cliente             Cliente              @relation(fields: [cliente_id], references: [id])
+  contrato            Contrato             @relation(fields: [contrato_id], references: [id])
+  indicadores         IndicadorFinanceiro?
+  score               ScoreFinanceiro?
+  perdas              PerdaFinanceira[]
+  oportunidades       OportunidadeFinanceira[]
+  impactos_integrados ImpactoIntegrado[]
+  snapshot            SnapshotEconomico?
+
+  @@unique([cliente_id, mes_referencia])
+  @@map("dados_financeiros")
+}
+
+model IndicadorFinanceiro {
+  // Calculado automaticamente pelo motor financeiro — nunca editado manualmente
+  id                        String    @id @default(uuid())
+  dados_financeiros_id      String    @unique
+  
+  capacidade_maxima_sessoes Int
+  taxa_ocupacao             Float
+  faturamento_liquido       Decimal   @db.Decimal(12,2)
+  faturamento_potencial     Decimal   @db.Decimal(12,2)
+  perda_faturamento         Decimal   @db.Decimal(12,2)
+  custo_total               Decimal   @db.Decimal(12,2)
+  custo_por_sessao          Decimal   @db.Decimal(12,2)
+  receita_por_sessao        Decimal   @db.Decimal(12,2)
+  margem_operacional        Decimal   @db.Decimal(12,2)
+  margem_percentual         Float
+  taxa_glosa                Float
+  custo_insumos_por_sessao  Decimal   @db.Decimal(12,2)
+  folha_sobre_receita       Float
+  perda_coagulacao          Float     @default(0)
+  alerta_principal          String?
+  calculado_at              DateTime  @default(now())
+
+  dados_financeiros         DadosFinanceiros @relation(fields: [dados_financeiros_id], references: [id])
+
+  @@map("indicadores_financeiros")
+}
+
+model ScoreFinanceiro {
+  id                    String                  @id @default(uuid())
+  dados_financeiros_id  String                  @unique
+  score_existencia      Float
+  score_confiabilidade  Float
+  score_coerencia       Float
+  score_eficiencia      Float
+  score_final           Float
+  classificacao         ClassificacaoFinanceiro
+  calculado_at          DateTime                @default(now())
+
+  dados_financeiros     DadosFinanceiros        @relation(fields: [dados_financeiros_id], references: [id])
+
+  @@map("score_financeiro")
+}
+
+model SnapshotEconomico {
+  // Congela o estado financeiro por período para rastreabilidade histórica
+  id                    String    @id @default(uuid())
+  dados_financeiros_id  String    @unique
+  cliente_id            String
+  periodo_mes           Int
+  periodo_ano           Int
+  snapshot_data         Json      // cópia completa dos indicadores naquele momento
+  criado_at             DateTime  @default(now())
+
+  dados_financeiros     DadosFinanceiros @relation(fields: [dados_financeiros_id], references: [id])
+
+  @@map("snapshots_economicos")
+}
+
+model PerdaFinanceira {
+  id                    String        @id @default(uuid())
+  cliente_id            String
+  contrato_id           String
+  dados_financeiros_id  String
+  mes_referencia        DateTime
+  tipo_perda            TipoPerda
+  descricao             String
+  valor_estimado        Decimal       @db.Decimal(12,2)
+  prioridade            PrioridadeAcao
+  created_at            DateTime      @default(now())
+
+  dados_financeiros     DadosFinanceiros @relation(fields: [dados_financeiros_id], references: [id])
+
+  @@map("perdas_financeiras")
+}
+
+model OportunidadeFinanceira {
+  id                    String        @id @default(uuid())
+  cliente_id            String
+  contrato_id           String
+  dados_financeiros_id  String
+  mes_referencia        DateTime
+  tipo_ganho            TipoGanho
+  descricao             String
+  ganho_estimado        Decimal       @db.Decimal(12,2)
+  prioridade            PrioridadeAcao
+  created_at            DateTime      @default(now())
+
+  dados_financeiros     DadosFinanceiros @relation(fields: [dados_financeiros_id], references: [id])
+
+  @@map("oportunidades_financeiras")
+}
+
+model BenchmarkMercado {
+  id                String    @id @default(uuid())
+  modalidade        String    // HD, DP, TX
+  indicador_codigo  String    // custo_por_sessao, taxa_glosa, etc
+  valor_p25         Float
+  valor_p50         Float
+  valor_p75         Float
+  fonte             String
+  ano_referencia    Int
+  ativo             Boolean   @default(true)
+
+  @@unique([modalidade, indicador_codigo, ano_referencia])
+  @@map("benchmarks_mercado")
+}
+
+// ─────────────────────────────────────────
+// INTEGRAÇÃO DOCUMENTAL + FINANCEIRA
+// ─────────────────────────────────────────
+
+model ImpactoIntegrado {
+  id                        String    @id @default(uuid())
+  avaliacao_documento_id    String?
+  dados_financeiros_id      String?
+  nao_conformidade_id       String?
+  tipo_falha                String
+  descricao_falha           String
+  peso_falha                Int       // 1-3
+  gravidade_risco           Int       // 1-3
+  exposicao_financeira      Int       // 1-3
+  impacto_score             Int       // peso * gravidade * exposição (1-9)
+  impacto_financeiro_estimado Decimal @db.Decimal(12,2) @default(0)
+  prioridade                PrioridadeAcao
+  acao_recomendada          String?
+  created_at                DateTime  @default(now())
+
+  avaliacao_documento       AvaliacaoDocumento? @relation(fields: [avaliacao_documento_id], references: [id])
+  dados_financeiros         DadosFinanceiros?   @relation(fields: [dados_financeiros_id], references: [id])
+  acoes_corretivas          AcaoCorretiva[]     @relation("AcaoImpacto")
+
+  @@map("impacto_integrado")
+}
+
+// ─────────────────────────────────────────
+// AÇÕES CORRETIVAS (M3/M4)
+// ─────────────────────────────────────────
+
+model AcaoCorretiva {
+  id                        String          @id @default(uuid())
+  cliente_id                String
+  contrato_id               String
+  origem                    OrigemAcao
+  
+  // Referências opcionais por origem — evita FK polimórfica
+  avaliacao_documento_id    String?
+  dados_financeiros_id      String?
+  impacto_integrado_id      String?
+  nao_conformidade_id       String?
+  
+  titulo                    String
+  descricao                 String
+  prioridade                PrioridadeAcao
+  responsavel_id            String?
+  prazo                     DateTime
+  status                    StatusAcao      @default(PENDENTE)
+  impacto_estimado          Decimal         @db.Decimal(12,2) @default(0)
+  resultado_realizado       Decimal         @db.Decimal(12,2) @default(0)
+  evidencias                Json?
+  concluida_at              DateTime?
+  created_at                DateTime        @default(now())
+  updated_at                DateTime        @updatedAt
+
+  cliente                   Cliente             @relation(fields: [cliente_id], references: [id])
+  contrato                  Contrato            @relation(fields: [contrato_id], references: [id])
+  responsavel               Usuario?            @relation("ResponsavelAcao", fields: [responsavel_id], references: [id])
+  avaliacao_documento       AvaliacaoDocumento? @relation("AcaoDocumental", fields: [avaliacao_documento_id], references: [id])
+  impacto_integrado         ImpactoIntegrado?   @relation("AcaoImpacto", fields: [impacto_integrado_id], references: [id])
+  nao_conformidade          NaoConformidade?    @relation("AcaoNC", fields: [nao_conformidade_id], references: [id])
+
+  @@map("acoes_corretivas")
+}
