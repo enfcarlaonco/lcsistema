@@ -62,8 +62,8 @@ export default function InputFinanceiroPage({ params }: Props) {
         mes_referencia: mesReferencia + '-01',
         fonte_pagadora: 'SUS',
         ...Object.fromEntries(
-          Object.entries(form).map(([k, v]) => [k, parseFloat(v) || 0])
-        ),
+           Object.entries(form).map(([k, v]) => [k, parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0])
+          ),
       }
 
       const res = await fetch('/api/dados-financeiros', {
