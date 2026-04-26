@@ -49,6 +49,19 @@ export default function InputFinanceiroPage({ params }: Props) {
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
+function parseBrazilianCurrency(value: string): number {
+  if (!value) return 0;
+
+  const normalized = value
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -61,10 +74,10 @@ export default function InputFinanceiroPage({ params }: Props) {
         contrato_id: contrato_id || 'contrato-dilson-2026',
         mes_referencia: mesReferencia + '-01',
         fonte_pagadora: 'SUS',
-        ...Object.fromEntries(
-           Object.entries(form).map(([k, v]) => [k, parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0])
-          ),
-      }
+        Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, parseBrazilianCurrency(v)])
+        )
+          }
 
       const res = await fetch('/api/dados-financeiros', {
         method: 'POST',
@@ -117,7 +130,9 @@ export default function InputFinanceiroPage({ params }: Props) {
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R$</span>
                       )}
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
+                        laceholder="Ex: 2.569.256,00"
                         min="0"
                         step={field.type === 'currency' ? '0.01' : '1'}
                         value={form[field.key]}
