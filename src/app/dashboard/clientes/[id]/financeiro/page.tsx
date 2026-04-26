@@ -72,12 +72,12 @@ function parseBrazilianCurrency(value: string): number {
       const payload = {
         cliente_id: params.id,
         contrato_id: contrato_id || 'contrato-dilson-2026',
-        mes_referencia: mesReferencia + '-01',
-        fonte_pagadora: 'SUS',
-        Object.fromEntries(
-        Object.entries(form).map(([k, v]) => [k, parseBrazilianCurrency(v)])
-        )
-          }
+  mes_referencia: mesReferencia + '-01',
+  fonte_pagadora: 'SUS',
+  ...Object.fromEntries(
+    Object.entries(form).map(([k, v]) => [k, parseBrazilianCurrency(v)])
+  )
+}
 
       const res = await fetch('/api/dados-financeiros', {
         method: 'POST',
@@ -132,13 +132,12 @@ function parseBrazilianCurrency(value: string): number {
                       <input
                         type="text"
                         inputMode="decimal"
-                        laceholder="Ex: 2.569.256,00"
+                        placeholder={field.type === 'currency' ? 'Ex: 2.569.256,00' : '0'}
                         min="0"
                         step={field.type === 'currency' ? '0.01' : '1'}
                         value={form[field.key]}
                         onChange={e => handleChange(field.key, e.target.value)}
                         className={`input ${field.type === 'currency' ? 'pl-9' : ''}`}
-                        placeholder="0"
                         required={field.key !== 'sessoes_perdidas' && !['custo_manutencao','custo_agua','outros_custos','total_glosas'].includes(field.key)}
                       />
                     </div>
