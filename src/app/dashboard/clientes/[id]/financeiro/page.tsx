@@ -8,33 +8,43 @@ interface Props { params: { id: string } }
 
 const camposFinanceiros = [
   { section: 'Produção', fields: [
-    { key: 'pacientes',          label: 'Total de pacientes ativos',      type: 'number', helper: 'Pacientes em tratamento no mês' },
-    { key: 'sessoes_realizadas', label: 'Sessões realizadas',             type: 'number', helper: 'Total de sessões executadas no mês' },
-    { key: 'sessoes_faturadas',  label: 'Sessões faturadas',              type: 'number', helper: 'Sessões efetivamente enviadas para cobrança' },
-    { key: 'sessoes_perdidas',   label: 'Sessões perdidas (coagulação)',   type: 'number', helper: 'Sessões interrompidas por coagulação do sistema' },
+    { key: 'pacientes',          label: 'Total de pacientes ativos',        type: 'number',   helper: 'Pacientes em tratamento no mês' },
+    { key: 'sessoes_realizadas', label: 'Sessões realizadas',               type: 'number',   helper: 'Total de sessões executadas no mês' },
+    { key: 'sessoes_faturadas',  label: 'Sessões faturadas',                type: 'number',   helper: 'Sessões efetivamente enviadas para cobrança' },
+    { key: 'sessoes_perdidas',   label: 'Sessões perdidas (coagulação)',    type: 'number',   helper: 'Sessões interrompidas por coagulação do sistema' },
   ]},
   { section: 'Faturamento', fields: [
-    { key: 'faturamento_bruto',  label: 'Faturamento bruto (R$)',  type: 'currency', helper: 'Total faturado antes de glosas' },
-    { key: 'total_glosas',       label: 'Total de glosas (R$)',    type: 'currency', helper: 'Valor total glosado no mês' },
+    { key: 'faturamento_bruto',  label: 'Faturamento bruto (R$)',           type: 'currency', helper: 'Total faturado antes de glosas. Ex: 1.456.421,12' },
+    { key: 'total_glosas',       label: 'Total de glosas (R$)',             type: 'currency', helper: 'Valor total glosado no mês. Ex: 45.200,00' },
   ]},
   { section: 'Custos', fields: [
-    { key: 'custo_insumos',      label: 'Custo de insumos (R$)',          type: 'currency', helper: 'Capilares, soluções, materiais de consumo' },
-    { key: 'custo_mao_obra',     label: 'Custo de mão de obra (R$)',      type: 'currency', helper: 'Folha de pagamento + encargos + terceirizados' },
-    { key: 'custo_manutencao',   label: 'Custo de manutenção (R$)',       type: 'currency', helper: 'Manutenção preventiva e corretiva de máquinas' },
+    { key: 'custo_insumos',      label: 'Custo de insumos (R$)',            type: 'currency', helper: 'Capilares, soluções, materiais de consumo' },
+    { key: 'custo_mao_obra',     label: 'Custo de mão de obra (R$)',        type: 'currency', helper: 'Folha de pagamento + encargos + terceirizados' },
+    { key: 'custo_manutencao',   label: 'Custo de manutenção (R$)',         type: 'currency', helper: 'Manutenção preventiva e corretiva de máquinas' },
     { key: 'custo_agua',         label: 'Custo de tratamento de água (R$)', type: 'currency', helper: 'STDAH e insumos de tratamento de água' },
-    { key: 'outros_custos',      label: 'Outros custos fixos (R$)',       type: 'currency', helper: 'Alimentação, limpeza, administração, etc.' },
+    { key: 'outros_custos',      label: 'Outros custos fixos (R$)',         type: 'currency', helper: 'Alimentação, limpeza, administração, etc.' },
   ]},
   { section: 'Estrutura operacional', fields: [
-    { key: 'maquinas',           label: 'Máquinas disponíveis',   type: 'number', helper: 'Total de máquinas de hemodiálise em funcionamento' },
-    { key: 'turnos_dia',         label: 'Turnos por dia',          type: 'number', helper: 'Número de turnos realizados por dia (máx. 4)' },
-    { key: 'dias_funcionamento', label: 'Dias de funcionamento',   type: 'number', helper: 'Dias em que o serviço funcionou no mês' },
+    { key: 'maquinas',           label: 'Máquinas disponíveis',             type: 'number',   helper: 'Total de máquinas de hemodiálise em funcionamento' },
+    { key: 'turnos_dia',         label: 'Turnos por dia',                   type: 'number',   helper: 'Número de turnos realizados por dia (máx. 4)' },
+    { key: 'dias_funcionamento', label: 'Dias de funcionamento',            type: 'number',   helper: 'Dias em que o serviço funcionou no mês' },
   ]},
 ]
+
+function parseBrazilianNumber(value: string): number {
+  if (!value || value.trim() === '') return 0
+  const normalized = value
+    .trim()
+    .replace(/\s/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
 
 export default function InputFinanceiroPage({ params }: Props) {
   const router = useRouter()
   const [mesReferencia, setMesReferencia] = useState('')
-  const [contrato_id, setContratoId] = useState('')
   const [form, setForm] = useState<Record<string, string>>({
     pacientes: '', sessoes_realizadas: '', sessoes_faturadas: '', sessoes_perdidas: '0',
     faturamento_bruto: '', total_glosas: '0', custo_insumos: '', custo_mao_obra: '',
@@ -49,19 +59,6 @@ export default function InputFinanceiroPage({ params }: Props) {
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
-function parseBrazilianCurrency(value: string): number {
-  if (!value) return 0;
-
-  const normalized = value
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  const parsed = Number(normalized);
-
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -71,13 +68,13 @@ function parseBrazilianCurrency(value: string): number {
     try {
       const payload = {
         cliente_id: params.id,
-        contrato_id: contrato_id || 'contrato-dilson-2026',
-  mes_referencia: mesReferencia + '-01',
-  fonte_pagadora: 'SUS',
-  ...Object.fromEntries(
-    Object.entries(form).map(([k, v]) => [k, parseBrazilianCurrency(v)])
-  )
-}
+        contrato_id: 'contrato-dilson-2026',
+        mes_referencia: mesReferencia + '-01',
+        fonte_pagadora: 'SUS',
+        ...Object.fromEntries(
+          Object.entries(form).map(([k, v]) => [k, parseBrazilianNumber(v)])
+        ),
+      }
 
       const res = await fetch('/api/dados-financeiros', {
         method: 'POST',
@@ -86,7 +83,10 @@ function parseBrazilianCurrency(value: string): number {
       })
 
       const data = await res.json()
-      if (!res.ok) { setErro(data.error || 'Erro ao salvar dados'); return }
+      if (!res.ok) {
+        setErro(data.error || 'Erro ao salvar dados')
+        return
+      }
 
       setResultado(data)
     } catch (err) {
@@ -105,6 +105,7 @@ function parseBrazilianCurrency(value: string): number {
 
       {!resultado ? (
         <form onSubmit={handleSubmit} className="space-y-6">
+
           <div className="card">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Mês de referência</h3>
             <input
@@ -132,13 +133,10 @@ function parseBrazilianCurrency(value: string): number {
                       <input
                         type="text"
                         inputMode="decimal"
-                        placeholder={field.type === 'currency' ? 'Ex: 2.569.256,00' : '0'}
-                        min="0"
-                        step={field.type === 'currency' ? '0.01' : '1'}
                         value={form[field.key]}
                         onChange={e => handleChange(field.key, e.target.value)}
                         className={`input ${field.type === 'currency' ? 'pl-9' : ''}`}
-                        required={field.key !== 'sessoes_perdidas' && !['custo_manutencao','custo_agua','outros_custos','total_glosas'].includes(field.key)}
+                        placeholder={field.type === 'currency' ? 'Ex: 1.456.421,12' : '0'}
                       />
                     </div>
                     {field.helper && (
@@ -162,10 +160,11 @@ function parseBrazilianCurrency(value: string): number {
               Cancelar
             </button>
           </div>
+
         </form>
       ) : (
-        /* Resultado do motor financeiro */
         <div className="space-y-4">
+
           <div className="card border-2 border-brand-400">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-900">Resultado da análise financeira</h2>
@@ -176,11 +175,11 @@ function parseBrazilianCurrency(value: string): number {
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               {[
-                { label: 'Faturamento líquido', valor: formatCurrency(resultado.indicadores.faturamento_liquido) },
-                { label: 'Margem operacional', valor: formatPercent(resultado.indicadores.margem_percentual) },
-                { label: 'Custo por sessão', valor: formatCurrency(resultado.indicadores.custo_por_sessao) },
-                { label: 'Taxa de ocupação', valor: formatPercent(resultado.indicadores.taxa_ocupacao) },
-                { label: 'Taxa de glosa', valor: formatPercent(resultado.indicadores.taxa_glosa) },
+                { label: 'Faturamento líquido',  valor: formatCurrency(resultado.indicadores.faturamento_liquido) },
+                { label: 'Margem operacional',   valor: formatPercent(resultado.indicadores.margem_percentual) },
+                { label: 'Custo por sessão',     valor: formatCurrency(resultado.indicadores.custo_por_sessao) },
+                { label: 'Taxa de ocupação',     valor: formatPercent(resultado.indicadores.taxa_ocupacao) },
+                { label: 'Taxa de glosa',        valor: formatPercent(resultado.indicadores.taxa_glosa) },
                 { label: 'Custo insumos/sessão', valor: formatCurrency(resultado.indicadores.custo_insumos_por_sessao) },
               ].map(item => (
                 <div key={item.label} className="bg-gray-50 rounded-lg p-3">
@@ -242,6 +241,7 @@ function parseBrazilianCurrency(value: string): number {
               Novo input
             </button>
           </div>
+
         </div>
       )}
     </div>
