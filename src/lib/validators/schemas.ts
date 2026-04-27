@@ -26,8 +26,8 @@ export const contratoSchema = z.object({
 
 export const dadosFinanceirosSchema = z.object({
   cliente_id: z.string().uuid(),
-  contrato_id: z.string().uuid(),
-  mes_referencia: z.string(), // "2026-03-01"
+  contrato_id: z.string(),
+  mes_referencia: z.string(),
   pacientes: z.number().int().positive(),
   sessoes_realizadas: z.number().int().positive(),
   sessoes_faturadas: z.number().int().min(0),
