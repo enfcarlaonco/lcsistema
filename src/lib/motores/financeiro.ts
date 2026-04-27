@@ -251,7 +251,7 @@ export function identificarPerdas(d: DadosEntrada, ind: IndicadoresCalculados): 
   if (ind.taxa_glosa > BENCHMARK.taxa_glosa.p50) {
     const glosa_excesso = round2((ind.taxa_glosa - BENCHMARK.taxa_glosa.p50) / 100 * d.faturamento_bruto)
     perdas.push({
-      tipo: 'GLOSA_EXCESSIVA',
+      tipo: 'GLOSA_ADMINISTRATIVA',
       descricao: `Taxa de glosa ${ind.taxa_glosa}% acima da mediana de mercado (${BENCHMARK.taxa_glosa.p50}%). Perda estimada vs. benchmark.`,
       valor_estimado: glosa_excesso,
       prioridade: ind.taxa_glosa > BENCHMARK.taxa_glosa.p75 ? 'CRITICA' : 'ALTA',
@@ -272,7 +272,7 @@ export function identificarPerdas(d: DadosEntrada, ind: IndicadoresCalculados): 
   if (ind.custo_por_sessao > BENCHMARK.custo_por_sessao.p50 && d.sessoes_realizadas > 0) {
     const custo_excesso = round2((ind.custo_por_sessao - BENCHMARK.custo_por_sessao.p50) * d.sessoes_realizadas)
     perdas.push({
-      tipo: 'CUSTO_EXCESSIVO',
+      tipo: 'INSUMO_EXCESSIVO',
       descricao: `Custo/sessão R$ ${ind.custo_por_sessao} acima do P50 (R$ ${BENCHMARK.custo_por_sessao.p50}). Impacto mensal estimado.`,
       valor_estimado: custo_excesso,
       prioridade: ind.custo_por_sessao > BENCHMARK.custo_por_sessao.p75 ? 'CRITICA' : 'MODERADA',
