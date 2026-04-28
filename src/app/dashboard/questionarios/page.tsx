@@ -94,12 +94,12 @@ export default function QuestionariosPage() {
               {/* Progresso por bloco */}
               <div className="flex gap-1 items-center">
                 {q.progresso.map(prog => (
-                  <div key={prog.id} className="text-center" title={`${prog.bloco.titulo}: ${prog.pct_completo}%`}>
+                  <div key={prog.id} className="text-center" title={`${prog.bloco?.titulo ?? ''}: ${prog.pct_completo}%`}>
                     <div className={`w-7 h-1.5 rounded-full ${
                       prog.pct_completo === 100 ? 'bg-green-500' :
                       prog.pct_completo > 0 ? 'bg-yellow-400' : 'bg-gray-200'
                     }`} />
-                    <span className="text-xs text-gray-400">{prog.bloco.codigo}</span>
+                    <span className="text-xs text-gray-400">{prog.bloco?.codigo ?? ''}</span>
                   </div>
                 ))}
               </div>
