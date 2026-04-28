@@ -90,6 +90,13 @@ export default async function ClienteDetalhePage({ params }: Props) {
             </Link>
             
             <Link
+              href={`/dashboard/clientes/${params.id}/resultados`}
+              className="btn-secondary flex items-center gap-2 text-xs"
+            >
+              <BarChart2 size={14} />
+              Ver resultados
+            </Link>
+            <Link
               href={`/dashboard/clientes/${params.id}/financeiro`}
               className="btn-secondary flex items-center gap-2 text-xs"
             >
