@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { formatCurrency, formatPercent, formatDate, getScoreBg, getPrioridadeColor } from '@/lib/utils'
 import { EvolucaoFinanceira } from '@/components/charts/EvolucaoFinanceira'
 import { ScoreGauge } from '@/components/charts/ScoreGauge'
-import { Plus, FileText, BarChart2, ClipboardList, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Plus, FileText, BarChart2, ClipboardList, ChevronRight, AlertTriangle, Pencil } from 'lucide-react'
 
 interface Props { params: { id: string } }
 
@@ -81,6 +81,14 @@ export default async function ClienteDetalhePage({ params }: Props) {
 
         {isLC && (
           <div className="flex gap-2">
+            <Link
+              href={`/dashboard/clientes/${params.id}/editar`}
+              className="btn-secondary flex items-center gap-2 text-xs"
+            >
+              <Pencil size={14} />
+              Editar
+            </Link>
+            
             <Link
               href={`/dashboard/clientes/${params.id}/financeiro`}
               className="btn-secondary flex items-center gap-2 text-xs"
