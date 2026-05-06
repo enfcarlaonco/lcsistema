@@ -24,7 +24,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const blocosAtivos = questionario.blocos_ativos as string[]
     const blocos = await prisma.blocoQuestionario.findMany({
-      where: { codigo: { in: blocosAtivos }, ativo: true },
+      where: blocosAtivos?.length > 0
+        ? { codigo: { in: blocosAtivos }, ativo: true }
+        : { ativo: true },
       include: { perguntas: { where: { ativo: true }, orderBy: { ordem: 'asc' } } },
       orderBy: { ordem: 'asc' },
     })
@@ -48,7 +50,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
-    // Deletar em cascata: respostas e progresso primeiro
     await prisma.$transaction(async (tx) => {
       await tx.respostaQuestionario.deleteMany({ where: { questionario_id: params.id } })
       await tx.progressoBloco.deleteMany({ where: { questionario_id: params.id } })

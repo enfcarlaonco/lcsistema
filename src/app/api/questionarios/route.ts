@@ -46,16 +46,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'cliente_id e contrato_id obrigatórios' }, { status: 400 })
     }
 
-    // Carregar blocos ativos
     const blocos = await prisma.blocoQuestionario.findMany({
       where: { ativo: true },
       orderBy: { ordem: 'asc' },
     })
 
-    // Bloco 4 (Faturamento) começa inativo — ativado após B0 definir modalidades
-    const blocosAtivos = blocos
-      .filter(b => b.codigo !== 'B4')
-      .map(b => b.codigo)
+    const blocosAtivos = blocos.map(b => b.codigo)
 
     const questionario = await prisma.$transaction(async (tx) => {
       const q = await tx.questionario.create({
@@ -67,7 +63,6 @@ export async function POST(req: NextRequest) {
         }
       })
 
-      // Criar registros de progresso por bloco
       for (const bloco of blocos) {
         const perguntas = await tx.pergunta.count({
           where: { bloco_id: bloco.id, ativo: true }
@@ -77,7 +72,7 @@ export async function POST(req: NextRequest) {
             questionario_id: q.id,
             bloco_id: bloco.id,
             total_perguntas: perguntas,
-            bloco_ativo: bloco.codigo !== 'B4',
+            bloco_ativo: true,
           }
         })
       }
