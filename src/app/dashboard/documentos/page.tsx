@@ -288,14 +288,19 @@ export default function DocumentosPage() {
   }
 
   async function carregarReferencias() {
-    if (referencias.length > 0) { setReferenciaExpandida(v => !v); return }
-    const clienteId = !isLC ? session?.user?.clienteId : undefined
-    const url = clienteId ? `/api/documentos/referencia?clienteId=${clienteId}` : '/api/documentos/referencia'
-    const res = await fetch(url)
-    const data = await res.json()
-    setReferencias(data.documentos ?? [])
-    setReferenciaExpandida(true)
+  if (referenciaExpandida && referencias.length > 0) {
+    setReferenciaExpandida(false)
+    return
   }
+  const clienteId = !isLC ? session?.user?.clienteId : undefined
+  const url = clienteId
+    ? `/api/documentos/referencia?clienteId=${clienteId}`
+    : `/api/documentos/referencia?incluirTodos=true`
+  const res = await fetch(url)
+  const data = await res.json()
+  setReferencias(data.documentos ?? [])
+  setReferenciaExpandida(true)
+}
 
   useEffect(() => { carregar() }, [])
 

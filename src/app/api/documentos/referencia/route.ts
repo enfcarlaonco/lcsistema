@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
     // Busca documentos compatíveis com o perfil
     // CONFORMIDADE → apenas AMBOS
     // ACREDITACAO  → AMBOS + ACREDITACAO
-    const perfisPermitidos = perfilCliente === 'ACREDITACAO'
-      ? ['AMBOS', 'ACREDITACAO']
-      : ['AMBOS']
+    const incluirTodos = searchParams.get('incluirTodos') === 'true'
+const perfisPermitidos = incluirTodos
+  ? ['AMBOS', 'ACREDITACAO']
+  : perfilCliente === 'ACREDITACAO'
+    ? ['AMBOS', 'ACREDITACAO']
+    : ['AMBOS']
 
     const documentos = await prisma.documentoReferencia.findMany({
       where: {
