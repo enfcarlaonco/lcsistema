@@ -163,7 +163,7 @@ enum TipoPerda {
 
 enum TipoGanho {
   RECUPERACAO_GLOSA
-  CODIGO_NAO_FATURADO
+FGO_NAO_FATURADO
   REDUCAO_CUSTO_INSUMO
   AUMENTO_OCUPACAO
   PADRONIZACAO_PROCESSO
@@ -460,9 +460,9 @@ model DocumentoReferencia {
 model DimensaoValidacao {
   id               String   @id @default(uuid())
   nome_dimensao    String   @unique
-  // Existência, Estrutura, Aplicabilidade, Impacto
   peso_percentual  Float
   ordem            Int
+  ativo            Boolean  @default(true)
 
   criterios        CriterioValidacao[]
 
