@@ -169,6 +169,15 @@ enum TipoGanho {
   PADRONIZACAO_PROCESSO
 }
 
+enum AgenteResponsavel {
+  ADMINISTRATIVO
+  MEDICO
+  ENFERMAGEM
+  GESTAO
+  QUALIDADE
+  TI
+}
+
 // NOVOS ENUMS — Módulo 2.2
 enum PerfilDiagnostico {
   CONFORMIDADE
@@ -825,6 +834,9 @@ model AcaoCorretiva {
   resultado_realizado       Decimal         @db.Decimal(12,2) @default(0)
   evidencias                Json?
   concluida_at              DateTime?
+  historico        Json?
+  evidencia_texto  String?
+  atualizado_por   String?
   created_at                DateTime        @default(now())
   updated_at                DateTime        @updatedAt
 
@@ -835,6 +847,7 @@ model AcaoCorretiva {
   impacto_integrado         ImpactoIntegrado?   @relation("AcaoImpacto", fields: [impacto_integrado_id], references: [id])
   nao_conformidade          NaoConformidade?    @relation("AcaoNC", fields: [nao_conformidade_id], references: [id])
 
+  responsaveis     AcaoResponsavel[]
   @@map("acoes_corretivas")
 }
 
@@ -897,4 +910,17 @@ model ChecklistOna {
   @@index([cliente_id])
   @@index([status])
   @@map("checklist_ona")
+}
+
+model AcaoResponsavel {
+  id        String            @id @default(uuid())
+  acao_id   String
+  agente    AgenteResponsavel
+  criado_at DateTime          @default(now())
+
+  acao      AcaoCorretiva     @relation(fields: [acao_id], references: [id], onDelete: Cascade)
+
+  @@unique([acao_id, agente])
+  @@index([acao_id])
+  @@map("acoes_responsaveis")
 }
