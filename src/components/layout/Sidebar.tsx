@@ -4,19 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  LayoutDashboard, Users, FileText, BarChart2,
-  ClipboardList, AlertTriangle, LogOut, Settings
+  LayoutDashboard, Users, Plus, LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
-  { href: '/dashboard/questionarios', label: 'Questionários', icon: ClipboardList },
-  { href: '/dashboard/documentos', label: 'Documentos', icon: FileText },
-  { href: '/dashboard/financeiro', label: 'Financeiro', icon: BarChart2 },
-  { href: '/dashboard/acoes', label: 'Ações corretivas', icon: AlertTriangle },
-]
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -41,25 +31,58 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {navItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/')
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-                active
-                  ? 'bg-brand-50 text-brand-600 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )}
-            >
-              <Icon size={16} className="flex-shrink-0" />
-              {item.label}
-            </Link>
-          )
-        })}
+
+        {/* Gestão LC Saúde */}
+        <Link
+          href="/dashboard"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+            pathname === '/dashboard'
+              ? 'bg-brand-50 text-brand-600 font-medium'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          )}
+        >
+          <LayoutDashboard size={16} className="flex-shrink-0" />
+          Gestão LC Saúde
+        </Link>
+
+        {/* Divisor */}
+        <div className="pt-3 pb-1">
+          <p className="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+            Clientes
+          </p>
+        </div>
+
+        {/* Novo cliente — só LC */}
+        {isLC && (
+          <Link
+            href="/dashboard/clientes/novo"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              pathname === '/dashboard/clientes/novo'
+                ? 'bg-brand-50 text-brand-600 font-medium'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            )}
+          >
+            <Plus size={16} className="flex-shrink-0" />
+            Novo cliente
+          </Link>
+        )}
+
+        {/* Lista de clientes */}
+        <Link
+          href="/dashboard/clientes"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+            pathname.startsWith('/dashboard/clientes') && pathname !== '/dashboard/clientes/novo'
+              ? 'bg-brand-50 text-brand-600 font-medium'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          )}
+        >
+          <Users size={16} className="flex-shrink-0" />
+          Clientes
+        </Link>
+
       </nav>
 
       {/* Usuário */}
@@ -82,3 +105,4 @@ export function Sidebar() {
     </aside>
   )
 }
+
