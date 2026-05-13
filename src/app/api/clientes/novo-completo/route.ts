@@ -15,15 +15,6 @@ function gerarSenha(): string {
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-function slugEmail(nome: string, cnpj: string): string {
-  const base = nome.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '.')
-    .replace(/\.+/g, '.')
-    .slice(0, 20)
-  const sufixo = cnpj.replace(/\D/g, '').slice(0, 6)
-  return `${base}.${sufixo}@lcsistema.app`
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +33,7 @@ export async function POST(req: NextRequest) {
       data_inicio, data_fim, total_horas, horas_presenciais,
       horas_online, valor_total,
       // Gestor
-      gestor_nome, gestor_email, gestor_cargo,
+      gestor_nome, gestor_email,
     } = body
 
     if (!nome || !cnpj || !gestor_nome || !gestor_email || !data_inicio || !data_fim || !valor_total) {
@@ -57,7 +48,6 @@ export async function POST(req: NextRequest) {
 
     const senhaTemporaria = gerarSenha()
     const senhaHash = await bcrypt.hash(senhaTemporaria, 12)
-    const loginGerado = slugEmail(nome, cnpj)
 
     // Cria tudo em transação
     const resultado = await prisma.$transaction(async (tx) => {
@@ -96,15 +86,13 @@ export async function POST(req: NextRequest) {
 
       // 3. Cria o usuário gestor
       const usuario = await tx.usuario.create({
-          data: {
+        data: {
           nome:           gestor_nome,
           email:          gestor_email,
           senha_hash:     senhaHash,
           perfil:         'GESTOR_CLIENTE',
           cliente: { connect: { id: cliente.id } },
-          primeiro_acesso: true,
-          status:         'ATIVO',
-        },
+      },
       })
 
       return { cliente, contrato, usuario }

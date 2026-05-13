@@ -94,8 +94,26 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         await tx.progressoBloco.deleteMany({ where: { questionario_id: q.id } })
       }
       await tx.questionario.deleteMany({ where: { cliente_id: params.id } })
+
+      // Avaliações documentais e impactos
+      const avaliacoes = await tx.avaliacaoDocumento.findMany({ where: { cliente_id: params.id } })
+      for (const av of avaliacoes) {
+        await tx.avaliacaoCriterio.deleteMany({ where: { avaliacao_documento_id: av.id } })
+        await tx.impactoIntegrado.deleteMany({ where: { avaliacao_documento_id: av.id } })
+      }
+      await tx.avaliacaoDocumento.deleteMany({ where: { cliente_id: params.id } })
+      await tx.documentoEnviado.deleteMany({ where: { cliente_id: params.id } })
+
+      // Ações corretivas e responsáveis
+      const acoes = await tx.acaoCorretiva.findMany({ where: { cliente_id: params.id } })
+      for (const acao of acoes) {
+        await tx.acaoResponsavel.deleteMany({ where: { acao_id: acao.id } })
+      }
       await tx.acaoCorretiva.deleteMany({ where: { cliente_id: params.id } })
+
       await tx.naoConformidade.deleteMany({ where: { cliente_id: params.id } })
+      await tx.matrizGut.deleteMany({ where: { cliente_id: params.id } })
+      await tx.checklistOna.deleteMany({ where: { cliente_id: params.id } })
       await tx.contrato.deleteMany({ where: { cliente_id: params.id } })
       await tx.clienteModalidade.deleteMany({ where: { cliente_id: params.id } })
       await tx.cliente.delete({ where: { id: params.id } })

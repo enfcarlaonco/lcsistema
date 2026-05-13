@@ -9,7 +9,7 @@ import {
   DollarSign, AlertTriangle, FileDown, Plus, Pencil,
   CheckCircle, Upload, ExternalLink, ChevronDown,
   ChevronUp, RefreshCw, Activity, TrendingDown,
-  TrendingUp, Users
+  TrendingUp
 } from 'lucide-react'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ const ABAS = [
 
 // ─── Aba: Visão Geral ─────────────────────────────────────────────────────────
 
-function AbaVisaoGeral({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
+function AbaVisaoGeral({ cliente }: { cliente: Cliente }) {
   const contrato = cliente.contratos[0]
   const ultimoDado = cliente.dados_financeiros[0]
   const score = ultimoDado?.score
@@ -134,8 +134,8 @@ function AbaVisaoGeral({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
   const perdaTotal = ultimoDado?.perdas?.reduce((s, p) => s + Number(p.valor_estimado), 0) ?? 0
   const ganhoTotal = ultimoDado?.oportunidades?.reduce((s, o) => s + Number(o.ganho_estimado), 0) ?? 0
 
-  const corScore = (s: number) => s >= 75 ? '#15803d' : s >= 50 ? '#92400e' : '#b91c1c'
-  const bgScore  = (s: number) => s >= 75 ? '#f0fdf4' : s >= 50 ? '#fef3c7' : '#fef2f2'
+  const corScore = (s: number) => s >= 85 ? '#15803d' : s >= 60 ? '#92400e' : '#b91c1c'
+  const bgScore  = (s: number) => s >= 85 ? '#f0fdf4' : s >= 60 ? '#fef3c7' : '#fef2f2'
 
   return (
     <div className="space-y-4">
@@ -561,7 +561,7 @@ function AbaFinanceiro({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
 
 // ─── Aba: Ações (com Matriz GUT) ──────────────────────────────────────────────
 
-function AbaAcoes({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
+function AbaAcoes({ cliente }: { cliente: Cliente }) {
   const [responsaveis, setResponsaveis] = useState<Record<string, string>>({})
 
   function setResp(ncId: string, valor: string) {
@@ -811,11 +811,11 @@ export default function ClienteDetalhePage() {
         })}
       </div>
 
-      {abaAtiva === 'visao-geral'  && <AbaVisaoGeral    cliente={cliente} isLC={isLC} />}
+      {abaAtiva === 'visao-geral'  && <AbaVisaoGeral    cliente={cliente} />}
       {abaAtiva === 'questionario' && <AbaQuestionario  cliente={cliente} isLC={isLC} />}
       {abaAtiva === 'documentos'   && <AbaDocumentos    cliente={cliente} />}
       {abaAtiva === 'financeiro'   && <AbaFinanceiro    cliente={cliente} isLC={isLC} />}
-      {abaAtiva === 'acoes'        && <AbaAcoes         cliente={cliente} isLC={isLC} />}
+      {abaAtiva === 'acoes'        && <AbaAcoes         cliente={cliente} />}
       {abaAtiva === 'diagnostico'  && <AbaDiagnostico   cliente={cliente} />}
       {abaAtiva === 'relatorio'    && <AbaRelatorio     cliente={cliente} />}
     </div>

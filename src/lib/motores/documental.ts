@@ -27,14 +27,14 @@ export interface ResultadoDocumental {
 
 const PESOS_DIMENSAO = {
   'Existência':     0.10,
-  'Estrutura':      0.30,
-  'Aplicabilidade': 0.40,
-  'Impacto':        0.20,
+  'Estrutura':      0.40,
+  'Aplicabilidade': 0.50,
+  'Impacto':        0.00, // desativada
 }
 
 const VALOR_RESPOSTA = {
   'SIM': 1.0,
-  'PARCIAL': 0.5,
+  'PARCIAL': 0.75,
   'NAO': 0.0,
   'NAO_SE_APLICA': null, // excluído do denominador
 }
