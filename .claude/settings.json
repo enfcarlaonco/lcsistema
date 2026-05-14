@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Read(//c/Users/Carla/Documents/lcsistemas/dia5/src/app/dashboard/clientes/[id]/resultados/**)",
+      "Read(//c/Users/Carla/Documents/lcsistemas/dia2/src/lib/motores/**)"
+    ]
+  }
+}
