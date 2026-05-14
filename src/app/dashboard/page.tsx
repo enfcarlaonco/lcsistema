@@ -230,78 +230,15 @@ export default async function DashboardPage() {
 
       {/* ── CLIENTES ATIVOS ─────────────────────────────────────────────── */}
       <div className="card mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-gray-700">
-            Clientes ativos
-            <span className="ml-2 text-xs font-normal text-gray-400">({linhasClientes.length})</span>
-          </h2>
-          <Link href="/dashboard/clientes" className="text-xs text-brand-600 hover:underline flex items-center gap-1">
-            Ver todos <ArrowRight size={10} />
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Clientes ativos</p>
+            <p className="text-3xl font-bold text-gray-900">{linhasClientes.length}</p>
+          </div>
+          <Link href="/dashboard/clientes" className="btn-secondary flex items-center gap-2 text-xs">
+            Ver todos <ArrowRight size={12} />
           </Link>
         </div>
-
-        {linhasClientes.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">Nenhum cliente com contrato ativo.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, textAlign: 'left' }}>Serviço</th>
-                  <th style={{ ...th, textAlign: 'left' }}>Tipo</th>
-                  <th style={{ ...th, textAlign: 'center' }}>% Consultoria</th>
-                  <th style={{ ...th, textAlign: 'center' }}>Horas realizadas</th>
-                  <th style={{ ...th, textAlign: 'center' }}>Questionário</th>
-                  <th style={{ ...th, textAlign: 'center' }}>NCs</th>
-                  <th style={{ ...th, textAlign: 'center' }}>Ações críticas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhasClientes.map((c, i) => {
-                  const sq = statusQBadge(c.statusQuestionario, c.pctQuestionario)
-                  return (
-                    <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                      <td style={{ ...td, textAlign: 'left' }}>
-                        <Link href={`/dashboard/clientes/${c.id}`} style={{ color: '#1d4ed8', fontWeight: 500, textDecoration: 'none' }}>
-                          {c.nome}
-                        </Link>
-                      </td>
-                      <td style={{ ...td, textAlign: 'left', color: '#6b7280', fontSize: 11 }}>
-                        {c.tipo_servico.replace(/_/g, ' ')}
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                          <div style={{ width: 56, height: 5, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden', flexShrink: 0 }}>
-                            <div style={{ height: '100%', width: `${c.pctHoras}%`, background: c.pctHoras >= 80 ? '#16a34a' : c.pctHoras >= 40 ? '#d97706' : '#3b82f6', borderRadius: 999 }} />
-                          </div>
-                          <span style={{ fontWeight: 600, color: '#111827', minWidth: 28, fontSize: 12 }}>{c.pctHoras}%</span>
-                        </div>
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        {c.horasRealizadas}h / {c.totalHoras}h
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: sq.bg, color: sq.color, fontWeight: 500 }}>
-                          {sq.label}
-                        </span>
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        {c.ncsAbertas > 0
-                          ? <span style={{ fontWeight: 700, color: '#b91c1c', fontSize: 13 }}>{c.ncsAbertas}</span>
-                          : <span style={{ color: '#d1d5db' }}>—</span>}
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        {c.acoesCriticas > 0
-                          ? <span style={{ fontWeight: 700, color: '#b91c1c', fontSize: 13 }}>{c.acoesCriticas}</span>
-                          : <span style={{ color: '#d1d5db' }}>—</span>}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       {/* ── CONTROLE POR CONSULTOR ───────────────────────────────────────── */}

@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { formatDate, getScoreBg } from '@/lib/utils'
-import { Plus, ChevronRight, AlertTriangle } from 'lucide-react'
+import { ChevronRight, AlertTriangle } from 'lucide-react'
 
 export default async function ClientesPage() {
   const session = await getServerSession(authOptions)
@@ -30,17 +30,9 @@ export default async function ClientesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Clientes</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{clientes.length} serviço{clientes.length !== 1 ? 's' : ''} cadastrado{clientes.length !== 1 ? 's' : ''}</p>
-        </div>
-        {isLC && (
-          <Link href="/dashboard/clientes/novo" className="btn-primary flex items-center gap-2">
-            <Plus size={16} />
-            Novo cliente
-          </Link>
-        )}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-gray-900">Clientes</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{clientes.length} serviço{clientes.length !== 1 ? 's' : ''} cadastrado{clientes.length !== 1 ? 's' : ''}</p>
       </div>
 
       <div className="space-y-3">

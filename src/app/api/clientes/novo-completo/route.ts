@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const {
       // Serviço
-      nome, cnpj, cnes, tipo_servico, cidade, estado,
+      nome, cnpj, cnes, tipo_servico, tipos_servico, cidade, estado,
       telefone, email_contato, perfil_diagnostico,
       // Contrato
       data_inicio, data_fim, total_horas, horas_presenciais,
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
           cnpj,
           cnes:               cnes || null,
           tipo_servico:       tipo_servico as any,
+          tipos_servico:      (tipos_servico ?? [tipo_servico]) as any,
           cidade:             cidade || null,
           estado:             estado || null,
           telefone:           telefone || null,

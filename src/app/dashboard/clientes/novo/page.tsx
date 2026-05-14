@@ -9,7 +9,6 @@ const tiposServico = [
   { value: 'DIALISE_PERITONEAL', label: 'Diálise Peritoneal' },
   { value: 'TRANSPLANTE_RENAL',  label: 'Transplante Renal' },
   { value: 'AMBULATORIO_NEFRO',  label: 'Ambulatório de Nefrologia' },
-  { value: 'MISTO',              label: 'Misto' },
 ]
 
 const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
@@ -25,13 +24,13 @@ export default function NovoClientePage() {
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState<{ clienteId: string; emailEnviado: boolean; nomeGestor: string } | null>(null)
+  const [tiposSelecionados, setTiposSelecionados] = useState<string[]>(['HEMODIALISE'])
 
   const [form, setForm] = useState({
     // Dados do serviço
     nome:               '',
     cnpj:               '',
     cnes:               '',
-    tipo_servico:       'HEMODIALISE',
     cidade:             '',
     estado:             'MG',
     telefone:           '',
@@ -56,8 +55,15 @@ export default function NovoClientePage() {
     setForm(prev => ({ ...prev, [key]: value }))
   }
 
+  function toggleTipo(value: string) {
+    setTiposSelecionados(prev =>
+      prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]
+    )
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (tiposSelecionados.length === 0) { setErro('Selecione ao menos um tipo de serviço.'); return }
     setLoading(true)
     setErro('')
 
@@ -65,7 +71,11 @@ export default function NovoClientePage() {
       const res = await fetch('/api/clientes/novo-completo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          tipo_servico:  tiposSelecionados[0],
+          tipos_servico: tiposSelecionados,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setErro(data.error ?? 'Erro ao cadastrar cliente.'); return }
@@ -151,19 +161,32 @@ export default function NovoClientePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Tipo de serviço *</label>
-              <select value={form.tipo_servico} onChange={e => set('tipo_servico', e.target.value)} className="input">
-                {tiposServico.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
+          <div>
+            <label className="label">Tipos de serviço * <span className="text-gray-400 font-normal">(selecione um ou mais)</span></label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {tiposServico.map(t => (
+                <label key={t.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
+                  tiposSelecionados.includes(t.value)
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 font-medium'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={tiposSelecionados.includes(t.value)}
+                    onChange={() => toggleTipo(t.value)}
+                    className="accent-brand-600"
+                  />
+                  {t.label}
+                </label>
+              ))}
             </div>
-            <div>
-              <label className="label">Perfil de diagnóstico *</label>
-              <select value={form.perfil_diagnostico} onChange={e => set('perfil_diagnostico', e.target.value)} className="input">
-                {perfisDiagnostico.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
-            </div>
+          </div>
+
+          <div>
+            <label className="label">Perfil de diagnóstico *</label>
+            <select value={form.perfil_diagnostico} onChange={e => set('perfil_diagnostico', e.target.value)} className="input">
+              {perfisDiagnostico.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
           </div>
         </div>
 

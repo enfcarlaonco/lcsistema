@@ -230,6 +230,7 @@ model Cliente {
   cnpj                 String             @unique
   cnes                 String?
   tipo_servico         TipoServico
+  tipos_servico        TipoServico[]
   cidade               String?
   estado               String?
   telefone             String?
