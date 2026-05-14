@@ -2,8 +2,6 @@
 // Gerador de relatório diagnóstico PDF usando pdfkit
 // Compatível com Vercel (Node.js serverless)
 
-import PDFDocument from 'pdfkit'
-
 // ── Paleta ───────────────────────────────────────────────────────────────────
 const CORES = {
   azul:        '#1B3A5C',
@@ -78,6 +76,7 @@ const AGENTE_LABELS: Record<string, string> = {
 
 // ── Gerador principal ─────────────────────────────────────────────────────────
 export async function gerarRelatorioPDF(dados: DadosRelatorio): Promise<Buffer> {
+  const PDFDocument = (await import('pdfkit')).default
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     const doc = new PDFDocument({
