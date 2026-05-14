@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { formatDate, getScoreBg } from '@/lib/utils'
-import { ChevronRight, AlertTriangle } from 'lucide-react'
+import { Plus, ChevronRight, AlertTriangle } from 'lucide-react'
 
 export default async function ClientesPage() {
   const session = await getServerSession(authOptions)

@@ -116,6 +116,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       await tx.checklistOna.deleteMany({ where: { cliente_id: params.id } })
       await tx.contrato.deleteMany({ where: { cliente_id: params.id } })
       await tx.clienteModalidade.deleteMany({ where: { cliente_id: params.id } })
+      await tx.usuario.deleteMany({ where: { cliente_id: params.id } })
       await tx.cliente.delete({ where: { id: params.id } })
     })
 
