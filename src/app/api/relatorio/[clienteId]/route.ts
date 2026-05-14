@@ -92,7 +92,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const dadosFinanceiros = await prisma.dadosFinanceiros.findFirst({
       where: { cliente_id: params.clienteId },
       orderBy: { mes_referencia: 'desc' },
-      include: { indicadores: true },
+      include: { indicadores: true, score: true },
     })
 
     // Plano de ação
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         score_documental: documentosAvaliados.length > 0
           ? documentosAvaliados.reduce((s, d) => s + (d.avaliacoes[0]?.score_final ?? 0), 0) / documentosAvaliados.length
           : null,
-        score_financeiro: dadosFinanceiros?.indicadores?.score_final ?? null,
+        score_financeiro: dadosFinanceiros?.score?.score_final ?? null,
       },
 
       identificacao: {
@@ -210,7 +210,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const nomeArquivo = `diagnostico_${cliente.nome.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

@@ -37,7 +37,8 @@ export async function extrairTexto(
 async function extrairPDF(buffer: Buffer): Promise<string> {
   try {
     const pdfParse = await import('pdf-parse')
-    const data = await pdfParse.default(buffer)
+    const parseFn = (pdfParse as any).default ?? pdfParse
+    const data = await parseFn(buffer)
     return data.text.slice(0, 15000) // limita a 15k chars para a IA
   } catch (e) {
     console.warn('Erro ao extrair PDF:', e)

@@ -9,7 +9,7 @@ import {
   DollarSign, AlertTriangle, FileDown, Plus, Pencil,
   CheckCircle, Upload, ExternalLink, ChevronDown,
   ChevronUp, RefreshCw, Activity, TrendingDown,
-  TrendingUp
+  TrendingUp, BarChart2
 } from 'lucide-react'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
