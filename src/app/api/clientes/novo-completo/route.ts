@@ -8,8 +8,6 @@ import { prisma } from '@/lib/prisma'
 import { Resend } from 'resend'
 import bcrypt from 'bcryptjs'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 function gerarSenha(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#'
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -101,6 +99,7 @@ export async function POST(req: NextRequest) {
     // 4. Envia e-mail com credenciais via Resend
     let emailEnviado = false
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY)
       const urlSistema = process.env.NEXTAUTH_URL?.replace('http://localhost:3000', 'https://lcsistema.vercel.app') ?? 'https://lcsistema.vercel.app'
 
       await resend.emails.send({
