@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  LayoutDashboard, Users, Plus, LogOut
+  LayoutDashboard, Users, Plus, LogOut, TrendingUp
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -32,19 +32,30 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
 
-        {/* Gestão LC Saúde */}
-        <Link
-          href="/dashboard"
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
-            pathname === '/dashboard'
-              ? 'bg-brand-50 text-brand-600 font-medium'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-          )}
-        >
-          <LayoutDashboard size={16} className="flex-shrink-0" />
-          Gestão LC Saúde
-        </Link>
+        {/* LC Saúde — Dashboard */}
+        {isLC && (
+          <Link
+            href="/dashboard"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              pathname === '/dashboard'
+                ? 'bg-brand-50 text-brand-600 font-medium'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            )}
+          >
+            <LayoutDashboard size={16} className="flex-shrink-0" />
+            LC Saúde
+          </Link>
+        )}
+
+        {/* Financeiro — em breve */}
+        {isLC && (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 cursor-not-allowed select-none">
+            <TrendingUp size={16} className="flex-shrink-0" />
+            <span>Financeiro</span>
+            <span className="ml-auto text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">em breve</span>
+          </div>
+        )}
 
         {/* Divisor */}
         <div className="pt-3 pb-1">

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
-  ChevronRight, BarChart2, ClipboardList, FileText,
+  ChevronRight, ClipboardList, FileText,
   DollarSign, AlertTriangle, FileDown, Plus, Pencil,
   CheckCircle, Upload, ExternalLink, ChevronDown,
   ChevronUp, RefreshCw, Activity, TrendingDown,
@@ -115,114 +115,13 @@ function urgenciaNC(prazo_dias: number): number {
 }
 
 const ABAS = [
-  { id: 'visao-geral',    label: 'Visão Geral',    icone: BarChart2 },
-  { id: 'questionario',   label: 'Questionário',   icone: ClipboardList },
-  { id: 'documentos',     label: 'Documentos',     icone: FileText },
-  { id: 'financeiro',     label: 'Financeiro',     icone: DollarSign },
-  { id: 'acoes',          label: 'Ações',          icone: AlertTriangle },
-  { id: 'diagnostico',    label: 'Diagnóstico',    icone: Activity },
-  { id: 'relatorio',      label: 'Relatório',      icone: FileDown },
+  { id: 'questionarios', label: 'Questionários',      icone: ClipboardList },
+  { id: 'documentos',    label: 'Documentos',         icone: FileText },
+  { id: 'financeiro',    label: 'Financeiro',         icone: DollarSign },
+  { id: 'diagnostico',   label: 'Diagnóstico',        icone: Activity },
+  { id: 'acoes',         label: 'Ações / Matriz GUT', icone: AlertTriangle },
+  { id: 'relatorio',     label: 'Relatórios',         icone: FileDown },
 ]
-
-// ─── Aba: Visão Geral ─────────────────────────────────────────────────────────
-
-function AbaVisaoGeral({ cliente }: { cliente: Cliente }) {
-  const contrato = cliente.contratos[0]
-  const ultimoDado = cliente.dados_financeiros[0]
-  const score = ultimoDado?.score
-
-  const perdaTotal = ultimoDado?.perdas?.reduce((s, p) => s + Number(p.valor_estimado), 0) ?? 0
-  const ganhoTotal = ultimoDado?.oportunidades?.reduce((s, o) => s + Number(o.ganho_estimado), 0) ?? 0
-
-  const corScore = (s: number) => s >= 85 ? '#15803d' : s >= 60 ? '#92400e' : '#b91c1c'
-  const bgScore  = (s: number) => s >= 85 ? '#f0fdf4' : s >= 60 ? '#fef3c7' : '#fef2f2'
-
-  return (
-    <div className="space-y-4">
-      {/* Score + KPIs */}
-      {ultimoDado && (
-        <div className="grid grid-cols-4 gap-4">
-          <div className="card flex flex-col items-center justify-center py-4">
-            {score ? (
-              <>
-                <div style={{ width: 80, height: 80, borderRadius: '50%', border: `6px solid ${corScore(score.score_final)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgScore(score.score_final) }}>
-                  <p style={{ fontSize: 22, fontWeight: 700, color: corScore(score.score_final) }}>{score.score_final}</p>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Score financeiro</p>
-                <p style={{ fontSize: 11, color: corScore(score.score_final), fontWeight: 500 }}>{score.classificacao?.replace(/_/g, ' ')}</p>
-              </>
-            ) : <p className="text-sm text-gray-400">Sem score</p>}
-          </div>
-          <div className="card">
-            <p className="text-xs text-gray-500 mb-1">Margem operacional</p>
-            <p className="text-2xl font-semibold text-gray-900">{fmtPct(Number(ultimoDado.indicadores?.margem_percentual ?? 0))}</p>
-            <p className="text-xs text-gray-400 mt-1">Meta: ≥ 15%</p>
-          </div>
-          <div className="card">
-            <p className="text-xs text-gray-500 mb-1">Perda identificada</p>
-            <p className="text-2xl font-semibold text-red-600">{fmt$(perdaTotal)}</p>
-            <p className="text-xs text-gray-400 mt-1">/mês estimado</p>
-          </div>
-          <div className="card">
-            <p className="text-xs text-gray-500 mb-1">Oportunidade de recuperação</p>
-            <p className="text-2xl font-semibold text-green-600">{fmt$(ganhoTotal)}</p>
-            <p className="text-xs text-gray-400 mt-1">/mês potencial</p>
-          </div>
-        </div>
-      )}
-
-      {/* Contrato ativo */}
-      <div className="card">
-        <h2 className="text-sm font-medium text-gray-700 mb-3">Contrato ativo</h2>
-        {contrato ? (
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              ['Início', fmtData(contrato.data_inicio)],
-              ['Término', fmtData(contrato.data_fim)],
-              ['Valor total', fmt$(contrato.valor_total)],
-              ['Total de horas', `${contrato.total_horas}h`],
-              ['Horas presenciais', `${contrato.horas_presenciais}h`],
-              ['Horas online', `${contrato.horas_online}h`],
-              ['Responsável cliente', contrato.responsavel_cliente ?? '—'],
-              ['Status', contrato.status],
-            ].map(([label, valor]) => (
-              <div key={label}>
-                <p className="text-xs text-gray-400">{label}</p>
-                <p className="text-sm font-medium text-gray-900">{valor}</p>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-sm text-gray-400">Nenhum contrato ativo.</p>}
-      </div>
-
-      {/* NCs abertas */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-gray-700">Não conformidades abertas</h2>
-          <span className="text-xs text-gray-400">{cliente.nao_conformidades.length} em aberto</span>
-        </div>
-        {cliente.nao_conformidades.length === 0 ? (
-          <div className="text-center py-4">
-            <CheckCircle size={20} className="mx-auto text-green-500 mb-2" />
-            <p className="text-sm text-gray-400">Nenhuma NC em aberto</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {cliente.nao_conformidades.slice(0, 5).map(nc => (
-              <div key={nc.id} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
-                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: ncCor[nc.nivel]?.bg, color: ncCor[nc.nivel]?.cor, fontWeight: 500, flexShrink: 0 }}>
-                  {nc.nivel.replace('_', ' ')}
-                </span>
-                <p className="text-xs text-gray-700 flex-1">{nc.descricao}</p>
-                <p className="text-xs text-gray-400 flex-shrink-0">{fmtData(nc.prazo_limite)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ─── Aba: Questionário ────────────────────────────────────────────────────────
 
@@ -757,7 +656,7 @@ export default function ClienteDetalhePage() {
 
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [loading, setLoading] = useState(true)
-  const [abaAtiva, setAbaAtiva] = useState('visao-geral')
+  const [abaAtiva, setAbaAtiva] = useState('questionarios')
 
   useEffect(() => {
     async function carregar() {
@@ -797,6 +696,39 @@ export default function ClienteDetalhePage() {
         )}
       </div>
 
+      {/* Resumo rápido */}
+      {(() => {
+        const score = cliente.dados_financeiros[0]?.score
+        const ncsAbertas = cliente.nao_conformidades.length
+        const acoesAbertas = cliente.acoes_corretivas.filter(a => a.status !== 'CONCLUIDA' && a.status !== 'CANCELADA').length
+        return (
+          <div className="flex items-center gap-4 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 flex-wrap">
+            {score && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Score financeiro</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: score.score_final >= 85 ? '#15803d' : score.score_final >= 60 ? '#92400e' : '#b91c1c' }}>
+                  {score.score_final}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">NCs abertas</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: ncsAbertas > 0 ? '#b91c1c' : '#15803d' }}>{ncsAbertas}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">Ações abertas</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: acoesAbertas > 0 ? '#d97706' : '#15803d' }}>{acoesAbertas}</span>
+            </div>
+            {contrato && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-gray-400">Contrato até</span>
+                <span className="text-xs font-medium text-gray-700">{fmtData(contrato.data_fim)}</span>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Abas */}
       <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
         {ABAS.map(aba => {
@@ -811,12 +743,11 @@ export default function ClienteDetalhePage() {
         })}
       </div>
 
-      {abaAtiva === 'visao-geral'  && <AbaVisaoGeral    cliente={cliente} />}
-      {abaAtiva === 'questionario' && <AbaQuestionario  cliente={cliente} isLC={isLC} />}
+      {abaAtiva === 'questionarios' && <AbaQuestionario  cliente={cliente} isLC={isLC} />}
       {abaAtiva === 'documentos'   && <AbaDocumentos    cliente={cliente} />}
       {abaAtiva === 'financeiro'   && <AbaFinanceiro    cliente={cliente} isLC={isLC} />}
-      {abaAtiva === 'acoes'        && <AbaAcoes         cliente={cliente} />}
       {abaAtiva === 'diagnostico'  && <AbaDiagnostico   cliente={cliente} />}
+      {abaAtiva === 'acoes'        && <AbaAcoes         cliente={cliente} />}
       {abaAtiva === 'relatorio'    && <AbaRelatorio     cliente={cliente} />}
     </div>
   )

@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { formatCurrency, formatDate, getPrioridadeColor } from '@/lib/utils'
-import { ArrowRight, Users, AlertTriangle, Clock, FileText, TrendingUp, CheckCircle, Activity, ClipboardList, BarChart2 } from 'lucide-react'
+import { formatDate, getPrioridadeColor } from '@/lib/utils'
+import { ArrowRight, CheckCircle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -69,127 +69,158 @@ export default async function DashboardPage() {
   }
 
   // ── DASHBOARD LC SAÚDE ────────────────────────────────────────────────────
-
   const hoje = new Date()
   const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-  const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
 
   const [
     clientesAtivos,
-    contratosEmAnalise,
-    acoesCriticas,
-    documentosPendentes,
-    questionariosAtivos,
-    sessoesDoMes,
-    avaliacoesDocumentais,
+    contratosEncerrados,
+    contratosAnalise,
+    contratosNaoEfetivados,
+    consultoresLC,
+    sessoesPorContrato,
+    acoesCriticasPorCliente,
+    ncsPorCliente,
+    horasPorConsultor,
+    contratosAtivosLC,
   ] = await Promise.all([
-    // Clientes com contrato ativo
     prisma.cliente.findMany({
       where: { contratos: { some: { status: 'ATIVO' } } },
       include: {
         contratos: { where: { status: 'ATIVO' }, take: 1, orderBy: { data_inicio: 'desc' } },
-        questionarios: { orderBy: { created_at: 'desc' }, take: 1, select: { id: true, pct_completo: true, status: true } },
-        acoes_corretivas: { where: { status: { not: 'CONCLUIDA' }, prioridade: 'CRITICA' }, select: { id: true } },
+        questionarios: { orderBy: { created_at: 'desc' }, take: 1, select: { pct_completo: true, status: true } },
       },
       orderBy: { nome: 'asc' },
     }),
-
-    // Contratos em análise
-    prisma.contrato.count({ where: { status: 'SUSPENSO' } }),
-
-    // Ações críticas abertas
-    prisma.acaoCorretiva.findMany({
-      where: { status: { not: 'CONCLUIDA' }, prioridade: 'CRITICA' },
+    prisma.contrato.findMany({
+      where: { status: 'CONCLUIDO' },
       include: { cliente: { select: { id: true, nome: true } } },
-      orderBy: { prazo: 'asc' },
-      take: 6,
+      orderBy: { data_fim: 'desc' },
     }),
-
-    // Documentos aguardando avaliação
-    prisma.documentoEnviado.count({ where: { status_documento: 'ENVIADO' } }),
-
-    // Questionários em andamento por cliente
-    prisma.questionario.findMany({
-      where: { status: { in: ['EM_ANDAMENTO', 'NAO_INICIADO'] } },
+    prisma.contrato.findMany({
+      where: { status: 'SUSPENSO' },
+      include: { cliente: { select: { id: true, nome: true } } },
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.contrato.findMany({
+      where: { status: 'CANCELADO' },
       include: { cliente: { select: { id: true, nome: true } } },
       orderBy: { updated_at: 'desc' },
     }),
-
-    // Sessões de consultoria do mês por contrato
-    prisma.sessaoConsultoria.findMany({
-      where: { data: { gte: inicioMes, lte: fimMes } },
-      include: { contrato: { include: { cliente: { select: { id: true, nome: true } } } } },
+    prisma.usuario.findMany({
+      where: { perfil: { in: ['ADMIN_LC', 'CONSULTOR_LC'] }, ativo: true },
+      select: { id: true, nome: true },
     }),
-
-    // Avaliações documentais por cliente
-    prisma.avaliacaoDocumento.findMany({
-      include: { documento_enviado: { include: { cliente: { select: { id: true, nome: true } } } } },
-      orderBy: { data_avaliacao: 'desc' },
+    prisma.sessaoConsultoria.groupBy({
+      by: ['contrato_id'],
+      _sum: { horas: true },
+    }),
+    prisma.acaoCorretiva.groupBy({
+      by: ['cliente_id'],
+      where: { prioridade: 'CRITICA', status: { not: 'CONCLUIDA' } },
+      _count: { _all: true },
+    }),
+    prisma.naoConformidade.groupBy({
+      by: ['cliente_id'],
+      where: { status: { not: 'RESOLVIDA' } },
+      _count: { _all: true },
+    }),
+    prisma.sessaoConsultoria.groupBy({
+      by: ['consultor_id'],
+      where: { data: { gte: inicioMes } },
+      _sum: { horas: true },
+    }),
+    prisma.contrato.findMany({
+      where: { status: 'ATIVO' },
+      select: { id: true, cliente_id: true, responsavel_lc_id: true },
     }),
   ])
 
-  // Calcula score de andamento por cliente (% horas concluídas)
-  const sessoesPorContrato = await prisma.sessaoConsultoria.groupBy({
-    by: ['contrato_id'],
-    _sum: { horas: true },
-  })
-
-  const andamentoPorCliente = clientesAtivos.map(c => {
+  // Monta linhas de clientes ativos
+  const linhasClientes = clientesAtivos.map(c => {
     const contrato = c.contratos[0]
-    if (!contrato) return { clienteId: c.id, nome: c.nome, pct: 0 }
-    const horasConcluidas = sessoesPorContrato.find(s => s.contrato_id === contrato.id)?._sum.horas ?? 0
-    const pct = contrato.total_horas > 0 ? Math.round((Number(horasConcluidas) / contrato.total_horas) * 100) : 0
-    return { clienteId: c.id, nome: c.nome, pct: Math.min(pct, 100) }
-  })
-
-  // Horas do mês por cliente
-  const horasDoMesPorCliente = clientesAtivos.map(c => {
-    const contrato = c.contratos[0]
-    if (!contrato) return { clienteId: c.id, nome: c.nome, horas: 0 }
-    const horas = sessoesDoMes
-      .filter(s => s.contrato_id === contrato.id)
-      .reduce((sum, s) => sum + s.horas, 0)
-    return { clienteId: c.id, nome: c.nome, horas: Math.round(horas * 10) / 10 }
-  }).sort((a, b) => b.horas - a.horas)
-
-  const totalHorasMes = horasDoMesPorCliente.reduce((s, c) => s + c.horas, 0)
-
-  // Score documental médio por cliente
-  const scoreDocPorCliente = clientesAtivos.map(c => {
-    const avsCliente = avaliacoesDocumentais.filter(
-      av => av.documento_enviado?.cliente?.id === c.id
-    )
-    const media = avsCliente.length > 0
-      ? Math.round(avsCliente.reduce((s, av) => s + av.score_final, 0) / avsCliente.length)
-      : null
-    return { clienteId: c.id, nome: c.nome, score: media, total: avsCliente.length }
-  }).sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
-
-  const scoreMedioGeral = scoreDocPorCliente.filter(c => c.score !== null).length > 0
-    ? Math.round(scoreDocPorCliente.filter(c => c.score !== null).reduce((s, c) => s + (c.score ?? 0), 0) / scoreDocPorCliente.filter(c => c.score !== null).length)
-    : null
-
-  // Financeiro LC
-  const contratosAtivos = await prisma.contrato.findMany({
-    where: { status: 'ATIVO' },
-    select: { valor_total: true, data_inicio: true, data_fim: true, total_horas: true },
-  })
-  const receitaMensal = contratosAtivos.reduce((s, c) => {
-    const meses = Math.max(1, Math.round((new Date(c.data_fim).getTime() - new Date(c.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 30)))
-    return s + Number(c.valor_total) / meses
-  }, 0)
-  const totalContratosValor = contratosAtivos.reduce((s, c) => s + Number(c.valor_total), 0)
-
-  // Questionários por cliente
-  const questPorCliente = clientesAtivos.map(c => {
+    if (!contrato) return null
+    const horasRealizadas = Number(sessoesPorContrato.find(s => s.contrato_id === contrato.id)?._sum.horas ?? 0)
+    const pctHoras = contrato.total_horas > 0
+      ? Math.min(100, Math.round((horasRealizadas / contrato.total_horas) * 100))
+      : 0
     const q = c.questionarios[0]
-    return { clienteId: c.id, nome: c.nome, pct: q?.pct_completo ?? 0, status: q?.status ?? 'NAO_INICIADO', id: q?.id }
+    return {
+      id: c.id,
+      nome: c.nome,
+      tipo_servico: c.tipo_servico,
+      pctHoras,
+      horasRealizadas,
+      totalHoras: contrato.total_horas,
+      pctQuestionario: q?.pct_completo ?? 0,
+      statusQuestionario: q?.status ?? 'NAO_INICIADO',
+      acoesCriticas: acoesCriticasPorCliente.find(a => a.cliente_id === c.id)?._count._all ?? 0,
+      ncsAbertas: ncsPorCliente.find(n => n.cliente_id === c.id)?._count._all ?? 0,
+    }
+  }).filter((c): c is NonNullable<typeof c> => c !== null)
+
+  // Monta linhas de consultores
+  const linhasConsultores = consultoresLC.map(consultor => {
+    const clienteIds = contratosAtivosLC
+      .filter(c => c.responsavel_lc_id === consultor.id)
+      .map(c => c.cliente_id)
+    return {
+      id: consultor.id,
+      nome: consultor.nome,
+      clientes: clienteIds.length,
+      ncsAbertas: ncsPorCliente
+        .filter(n => clienteIds.includes(n.cliente_id))
+        .reduce((s, n) => s + n._count._all, 0),
+      acoesCriticas: acoesCriticasPorCliente
+        .filter(a => clienteIds.includes(a.cliente_id))
+        .reduce((s, a) => s + a._count._all, 0),
+      horasMes: Math.round(Number(
+        horasPorConsultor.find(h => h.consultor_id === consultor.id)?._sum.horas ?? 0
+      ) * 10) / 10,
+    }
   })
-  const totalQuestAndamento = questPorCliente.filter(q => q.status === 'EM_ANDAMENTO').length
+
+  function statusQBadge(status: string, pct: number) {
+    if (status === 'NAO_INICIADO')        return { label: 'Não iniciado', bg: '#f3f4f6', color: '#6b7280' }
+    if (status === 'EM_ANDAMENTO')        return { label: `${pct}%`,      bg: '#eff6ff', color: '#1d4ed8' }
+    if (status === 'AGUARDANDO_VALIDACAO') return { label: 'Aguardando',  bg: '#fef3c7', color: '#92400e' }
+    if (status === 'VALIDADO')            return { label: 'Validado',     bg: '#f0fdf4', color: '#15803d' }
+    return { label: status, bg: '#f3f4f6', color: '#6b7280' }
+  }
+
+  const th = { padding: '8px 12px', fontWeight: 500, color: '#6b7280', fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.05em', borderBottom: '2px solid #e5e7eb' }
+  const td = { padding: '10px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 12, color: '#374151' }
+
+  const secoes = [
+    {
+      titulo: 'Contratos encerrados',
+      contratos: contratosEncerrados,
+      cor: '#16a34a',
+      bg: '#f9fafb',
+      info: (c: typeof contratosEncerrados[0]) =>
+        `Encerrado em ${new Date(c.data_fim).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}`,
+      empty: 'Nenhum contrato encerrado.',
+    },
+    {
+      titulo: 'Contratos em análise',
+      contratos: contratosAnalise,
+      cor: '#d97706',
+      bg: '#fffbeb',
+      info: () => 'Aguardando aprovação',
+      empty: 'Nenhum contrato em análise.',
+    },
+    {
+      titulo: 'Contratos não efetivados',
+      contratos: contratosNaoEfetivados,
+      cor: '#9ca3af',
+      bg: '#f9fafb',
+      info: () => 'Não efetivado',
+      empty: 'Nenhum registro.',
+    },
+  ]
 
   return (
     <div>
-      {/* Cabeçalho */}
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Dashboard — LC Saúde</h1>
         <p className="text-sm text-gray-500 mt-0.5">
@@ -197,233 +228,149 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* ── PRODUTIVIDADE ─────────────────────────────────────────────── */}
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Produtividade</p>
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Clientes ativos</p>
-            <Users size={14} className="text-brand-400" />
-          </div>
-          <p className="text-2xl font-semibold text-gray-900">{clientesAtivos.length}</p>
-          <Link href="/dashboard/clientes" className="text-xs text-brand-600 mt-1 flex items-center gap-1 hover:underline">
+      {/* ── CLIENTES ATIVOS ─────────────────────────────────────────────── */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-gray-700">
+            Clientes ativos
+            <span className="ml-2 text-xs font-normal text-gray-400">({linhasClientes.length})</span>
+          </h2>
+          <Link href="/dashboard/clientes" className="text-xs text-brand-600 hover:underline flex items-center gap-1">
             Ver todos <ArrowRight size={10} />
           </Link>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Andamento médio</p>
-            <Activity size={14} className="text-brand-400" />
-          </div>
-          <p className="text-2xl font-semibold text-gray-900">
-            {andamentoPorCliente.length > 0
-              ? `${Math.round(andamentoPorCliente.reduce((s, a) => s + a.pct, 0) / andamentoPorCliente.length)}%`
-              : '—'}
-          </p>
-          <p className="text-xs text-gray-400 mt-1">das horas de consultoria</p>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Ações críticas abertas</p>
-            <AlertTriangle size={14} className="text-danger-400" />
-          </div>
-          <p className="text-2xl font-semibold text-danger-600">{acoesCriticas.length}</p>
-          <Link href="/dashboard/acoes" className="text-xs text-brand-600 mt-1 flex items-center gap-1 hover:underline">
-            Ver todas <ArrowRight size={10} />
-          </Link>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Propostas em análise</p>
-            <Clock size={14} className="text-warning-400" />
-          </div>
-          <p className="text-2xl font-semibold text-warning-600">{contratosEmAnalise}</p>
-          <p className="text-xs text-gray-400 mt-1">aguardando aprovação</p>
-        </div>
-      </div>
 
-      {/* ── FINANCEIRO LC ─────────────────────────────────────────────── */}
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Financeiro LC Saúde</p>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Receita mensal estimada</p>
-            <TrendingUp size={14} className="text-success-500" />
-          </div>
-          <p className="text-2xl font-semibold text-success-600">{formatCurrency(receitaMensal)}</p>
-          <p className="text-xs text-gray-400 mt-1">base contratos ativos</p>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Valor total em contratos</p>
-            <FileText size={14} className="text-brand-400" />
-          </div>
-          <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totalContratosValor)}</p>
-          <p className="text-xs text-gray-400 mt-1">{contratosAtivos.length} contrato{contratosAtivos.length !== 1 ? 's' : ''} ativo{contratosAtivos.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Documentos p/ avaliar</p>
-            <FileText size={14} className="text-warning-400" />
-          </div>
-          <p className="text-2xl font-semibold text-warning-600">{documentosPendentes}</p>
-          <Link href="/dashboard/documentos" className="text-xs text-brand-600 mt-1 flex items-center gap-1 hover:underline">
-            Ver documentos <ArrowRight size={10} />
-          </Link>
-        </div>
-      </div>
-
-      {/* ── CARDS A, B, C + AÇÕES CRÍTICAS ────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
-
-        {/* Coluna esquerda — cards A, B, C empilhados */}
-        <div className="space-y-4">
-
-          {/* A — Questionários em andamento */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">A</span>
-                <h2 className="text-sm font-medium text-gray-700">Questionários em andamento</h2>
-              </div>
-              <Link href="/dashboard/questionarios" className="text-xs text-brand-600 hover:underline flex items-center gap-1">
-                Ver todos <ArrowRight size={10} />
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {questPorCliente.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-2">Nenhum questionário iniciado.</p>
-              ) : (
-                questPorCliente.map(q => (
-                  <div key={q.clienteId} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                    <p className="text-xs text-gray-700 truncate flex-1">{q.nome}</p>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${q.pct}%`,
-                            background: q.pct >= 80 ? '#16a34a' : q.pct >= 40 ? '#d97706' : '#3b82f6'
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-gray-600 w-8 text-right">{q.pct}%</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                        q.status === 'EM_ANDAMENTO' ? 'bg-brand-50 text-brand-600' :
-                        q.status === 'VALIDADO' ? 'bg-success-50 text-success-600' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {q.status === 'EM_ANDAMENTO' ? 'Em andamento' :
-                         q.status === 'VALIDADO' ? 'Validado' :
-                         q.status === 'NAO_INICIADO' ? 'Não iniciado' : q.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* B — Horas de consultoria este mês */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">B</span>
-                <h2 className="text-sm font-medium text-gray-700">Horas de consultoria — {hoje.toLocaleDateString('pt-BR', { month: 'long' })}</h2>
-              </div>
-              <span className="text-xs text-gray-400">{Math.round(totalHorasMes * 10) / 10}h total</span>
-            </div>
-            <div className="space-y-2">
-              {horasDoMesPorCliente.length === 0 || totalHorasMes === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-2">Nenhuma sessão registrada este mês.</p>
-              ) : (
-                horasDoMesPorCliente.map(c => (
-                  <div key={c.clienteId} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                    <p className="text-xs text-gray-700 truncate flex-1">{c.nome}</p>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-brand-400 rounded-full"
-                          style={{ width: `${Math.round((c.horas / Math.max(...horasDoMesPorCliente.map(x => x.horas))) * 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-gray-600 w-10 text-right">{c.horas}h</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* C — Score documental médio */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">C</span>
-                <h2 className="text-sm font-medium text-gray-700">Score documental médio</h2>
-              </div>
-              <Link href="/dashboard/documentos" className="text-xs text-brand-600 hover:underline flex items-center gap-1">
-                Ver todos <ArrowRight size={10} />
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {scoreDocPorCliente.every(c => c.score === null) ? (
-                <p className="text-xs text-gray-400 text-center py-2">Nenhum documento avaliado ainda.</p>
-              ) : (
-                scoreDocPorCliente.map(c => {
-                  const cor = c.score === null ? '#9ca3af' : c.score >= 85 ? '#16a34a' : c.score >= 60 ? '#d97706' : '#dc2626'
+        {linhasClientes.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">Nenhum cliente com contrato ativo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ ...th, textAlign: 'left' }}>Serviço</th>
+                  <th style={{ ...th, textAlign: 'left' }}>Tipo</th>
+                  <th style={{ ...th, textAlign: 'center' }}>% Consultoria</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Horas realizadas</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Questionário</th>
+                  <th style={{ ...th, textAlign: 'center' }}>NCs</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Ações críticas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhasClientes.map((c, i) => {
+                  const sq = statusQBadge(c.statusQuestionario, c.pctQuestionario)
                   return (
-                    <div key={c.clienteId} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                      <p className="text-xs text-gray-700 truncate flex-1">{c.nome}</p>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-xs text-gray-400">{c.total} doc{c.total !== 1 ? 's' : ''}</span>
-                        <span className="text-xs font-semibold w-10 text-right" style={{ color: cor }}>
-                          {c.score !== null ? `${c.score}%` : '—'}
+                    <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                      <td style={{ ...td, textAlign: 'left' }}>
+                        <Link href={`/dashboard/clientes/${c.id}`} style={{ color: '#1d4ed8', fontWeight: 500, textDecoration: 'none' }}>
+                          {c.nome}
+                        </Link>
+                      </td>
+                      <td style={{ ...td, textAlign: 'left', color: '#6b7280', fontSize: 11 }}>
+                        {c.tipo_servico.replace(/_/g, ' ')}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                          <div style={{ width: 56, height: 5, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden', flexShrink: 0 }}>
+                            <div style={{ height: '100%', width: `${c.pctHoras}%`, background: c.pctHoras >= 80 ? '#16a34a' : c.pctHoras >= 40 ? '#d97706' : '#3b82f6', borderRadius: 999 }} />
+                          </div>
+                          <span style={{ fontWeight: 600, color: '#111827', minWidth: 28, fontSize: 12 }}>{c.pctHoras}%</span>
+                        </div>
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {c.horasRealizadas}h / {c.totalHoras}h
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: sq.bg, color: sq.color, fontWeight: 500 }}>
+                          {sq.label}
                         </span>
-                      </div>
-                    </div>
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {c.ncsAbertas > 0
+                          ? <span style={{ fontWeight: 700, color: '#b91c1c', fontSize: 13 }}>{c.ncsAbertas}</span>
+                          : <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {c.acoesCriticas > 0
+                          ? <span style={{ fontWeight: 700, color: '#b91c1c', fontSize: 13 }}>{c.acoesCriticas}</span>
+                          : <span style={{ color: '#d1d5db' }}>—</span>}
+                      </td>
+                    </tr>
                   )
-                })
-              )}
-            </div>
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Coluna direita — Ações críticas */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-gray-700">Ações críticas — prazo mais próximo</h2>
-            <Link href="/dashboard/acoes" className="text-xs text-brand-600 hover:underline flex items-center gap-1">
-              Ver todas <ArrowRight size={10} />
-            </Link>
-          </div>
-          {acoesCriticas.length === 0 ? (
-            <div className="text-center py-6">
-              <CheckCircle size={24} className="mx-auto text-success-600 mb-2" />
-              <p className="text-sm text-gray-400">Nenhuma ação crítica em aberto</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {acoesCriticas.map(acao => {
-                const vencida = new Date(acao.prazo) < hoje
-                return (
-                  <div key={acao.id} className={`p-3 rounded-lg ${vencida ? 'bg-danger-50' : 'bg-warning-50'}`}>
-                    <p className="text-xs font-medium text-danger-600 mb-0.5">{acao.cliente.nome}</p>
-                    <p className="text-sm text-gray-900 truncate">{acao.titulo}</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getPrioridadeColor(acao.prioridade)}`}>
-                        {acao.prioridade}
-                      </span>
-                      <p className={`text-xs font-medium ${vencida ? 'text-danger-600' : 'text-gray-400'}`}>
-                        {vencida ? '⚠ Vencida · ' : 'Prazo: '}{formatDate(acao.prazo)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+      {/* ── CONTROLE POR CONSULTOR ───────────────────────────────────────── */}
+      {linhasConsultores.length > 0 && (
+        <div className="card mb-6">
+          <h2 className="text-sm font-medium text-gray-700 mb-4">
+            Controle de entrega por consultor
+            <span className="ml-2 text-xs font-normal text-gray-400">
+              {hoje.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </span>
+          </h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, textAlign: 'left' }}>Consultor</th>
+                <th style={{ ...th, textAlign: 'center' }}>Clientes ativos</th>
+                <th style={{ ...th, textAlign: 'center' }}>Horas no mês</th>
+                <th style={{ ...th, textAlign: 'center' }}>NCs abertas</th>
+                <th style={{ ...th, textAlign: 'center' }}>Ações críticas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhasConsultores.map((c, i) => (
+                <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                  <td style={{ ...td, textAlign: 'left', fontWeight: 500, color: '#111827' }}>{c.nome}</td>
+                  <td style={{ ...td, textAlign: 'center' }}>{c.clientes}</td>
+                  <td style={{ ...td, textAlign: 'center' }}>{c.horasMes}h</td>
+                  <td style={{ ...td, textAlign: 'center' }}>
+                    {c.ncsAbertas > 0
+                      ? <span style={{ fontWeight: 700, color: '#b91c1c' }}>{c.ncsAbertas}</span>
+                      : <span style={{ color: '#d1d5db' }}>—</span>}
+                  </td>
+                  <td style={{ ...td, textAlign: 'center' }}>
+                    {c.acoesCriticas > 0
+                      ? <span style={{ fontWeight: 700, color: '#b91c1c' }}>{c.acoesCriticas}</span>
+                      : <span style={{ color: '#d1d5db' }}>—</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      {/* ── CONTRATOS ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-4">
+        {secoes.map(({ titulo, contratos, cor, bg, info, empty }) => (
+          <div key={titulo} className="card">
+            <div className="flex items-center gap-2 mb-3">
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: cor, flexShrink: 0 }} />
+              <h2 className="text-sm font-medium text-gray-700 flex-1">{titulo}</h2>
+              <span className="text-xs text-gray-400">{contratos.length}</span>
+            </div>
+            {contratos.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">{empty}</p>
+            ) : (
+              <div className="space-y-2">
+                {contratos.map(c => (
+                  <div key={c.id} style={{ padding: '8px 10px', background: bg, borderRadius: 8, borderLeft: `3px solid ${cor}` }}>
+                    <Link href={`/dashboard/clientes/${c.cliente.id}`} style={{ fontSize: 12, fontWeight: 500, color: '#111827', textDecoration: 'none' }}>
+                      {c.cliente.nome}
+                    </Link>
+                    <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{info(c as any)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
