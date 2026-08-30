@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  LayoutDashboard, Users, Plus, LogOut, TrendingUp
+  LayoutDashboard, Users, Plus, LogOut, TrendingUp, Target
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -45,6 +45,22 @@ export function Sidebar() {
           >
             <LayoutDashboard size={16} className="flex-shrink-0" />
             LC Saúde
+          </Link>
+        )}
+
+        {/* Matriz GUT — visão consolidada de todos os clientes */}
+        {isLC && (
+          <Link
+            href="/dashboard/matriz-gut"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              pathname === '/dashboard/matriz-gut'
+                ? 'bg-brand-50 text-brand-600 font-medium'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            )}
+          >
+            <Target size={16} className="flex-shrink-0" />
+            Matriz GUT
           </Link>
         )}
 

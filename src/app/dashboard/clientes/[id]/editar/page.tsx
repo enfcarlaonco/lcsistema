@@ -15,6 +15,11 @@ const tiposServico = [
 
 const estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
+const perfisDiagnostico = [
+  { value: 'CONFORMIDADE', label: 'Conformidade (legislação e boas práticas)' },
+  { value: 'ACREDITACAO',  label: 'Acreditação (ONA)' },
+]
+
 export default function EditarClientePage({ params }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -23,6 +28,7 @@ export default function EditarClientePage({ params }: Props) {
   const [form, setForm] = useState({
     nome: '', cnpj: '', cnes: '', tipo_servico: 'HEMODIALISE',
     cidade: '', estado: 'MG', telefone: '', email_contato: '',
+    perfil_diagnostico: 'CONFORMIDADE',
   })
 
   useEffect(() => {
@@ -38,6 +44,7 @@ export default function EditarClientePage({ params }: Props) {
           estado: data.estado ?? 'MG',
           telefone: data.telefone ?? '',
           email_contato: data.email_contato ?? '',
+          perfil_diagnostico: data.perfil_diagnostico ?? 'CONFORMIDADE',
         })
         setCarregando(false)
       })
@@ -112,6 +119,13 @@ export default function EditarClientePage({ params }: Props) {
             <select value={form.tipo_servico} onChange={e => handleChange('tipo_servico', e.target.value)} className="input">
               {tiposServico.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="label">Perfil de diagnóstico *</label>
+            <select value={form.perfil_diagnostico} onChange={e => handleChange('perfil_diagnostico', e.target.value)} className="input">
+              {perfisDiagnostico.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">Define se este cliente segue o checklist de conformidade ou o de acreditação ONA (habilita a aba "Checklist ONA").</p>
           </div>
         </div>
 

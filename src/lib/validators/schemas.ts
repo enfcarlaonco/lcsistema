@@ -9,6 +9,7 @@ export const clienteSchema = z.object({
   estado: z.string().length(2).optional(),
   telefone: z.string().optional(),
   email_contato: z.string().email().optional().or(z.literal('')),
+  perfil_diagnostico: z.enum(['CONFORMIDADE', 'ACREDITACAO']).optional(),
 })
 
 export const contratoSchema = z.object({
