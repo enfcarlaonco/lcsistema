@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { STATUS_GUT_CONFIG } from '@/lib/matriz-gut'
 
 interface Params { params: { id: string } }
 
@@ -27,6 +28,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       problema, area, gravidade, urgencia, tendencia,
       responsavel, prazo_acao, status, observacoes,
     } = body
+
+    if (status !== undefined && !Object.keys(STATUS_GUT_CONFIG).includes(status)) {
+      return NextResponse.json({ error: 'Status inválido.' }, { status: 400 })
+    }
 
     const atualizacoes: Record<string, any> = {}
 

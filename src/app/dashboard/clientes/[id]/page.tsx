@@ -11,6 +11,7 @@ import {
   ChevronUp, RefreshCw, Activity, TrendingDown,
   TrendingUp, BarChart2, ListChecks, Trash2, Search
 } from 'lucide-react'
+import { corGUT, bgGUT, prioridadeGut, STATUS_GUT_CONFIG, STATUS_GUT_DEFAULT } from '@/lib/matriz-gut'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -132,12 +133,6 @@ interface ChecklistOnaItem {
   data_verificacao?: string | null
   proxima_acao?: string | null
   observacoes?: string | null
-}
-
-const statusGutConfig: Record<string, { label: string; cor: string; bg: string }> = {
-  PENDENTE:     { label: 'Pendente',     cor: '#4b5563', bg: '#f3f4f6' },
-  EM_ANDAMENTO: { label: 'Em andamento', cor: '#1d4ed8', bg: '#eff6ff' },
-  CONCLUIDO:    { label: 'Concluído',    cor: '#15803d', bg: '#f0fdf4' },
 }
 
 const statusOnaConfig: Record<string, { label: string; cor: string; bg: string }> = {
@@ -512,9 +507,6 @@ function AbaFinanceiro({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
 
 // ─── Aba: Ações (com Matriz GUT persistida) ───────────────────────────────────
 
-function corGUT(gut: number) { return gut >= 60 ? '#b91c1c' : gut >= 27 ? '#92400e' : '#1d4ed8' }
-function bgGUT(gut: number)  { return gut >= 60 ? '#fef2f2' : gut >= 27 ? '#fef3c7' : '#eff6ff' }
-
 function FormNovoItemGut({ clienteId, onCriado, onCancelar }: {
   clienteId: string
   onCriado: (item: MatrizGutItem) => void
@@ -564,7 +556,7 @@ function FormNovoItemGut({ clienteId, onCriado, onCancelar }: {
           </label>
         ))}
         <span style={{ fontSize: 12, fontWeight: 700, marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, background: bgGUT(g * u * t), color: corGUT(g * u * t) }}>
-          GUT = {g * u * t}
+          GUT = {g * u * t} · {prioridadeGut(g * u * t).label}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -598,7 +590,8 @@ function LinhaGutPersistida({ item, isLC, onAtualizado, onRemovido }: {
     if (res.ok) onRemovido(item.id)
   }
 
-  const status = statusGutConfig[item.status] ?? statusGutConfig.PENDENTE
+  const status = STATUS_GUT_CONFIG[item.status] ?? { label: item.status, cor: '#6b7280', bg: '#f3f4f6' }
+  const prioridade = prioridadeGut(item.gut_score)
 
   return (
     <tr style={{ background: '#fff' }}>
@@ -624,9 +617,14 @@ function LinhaGutPersistida({ item, isLC, onAtualizado, onRemovido }: {
         </span>
       </td>
       <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
+        <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: prioridade.bg, color: prioridade.cor, fontWeight: 500 }}>
+          {prioridade.label}
+        </span>
+      </td>
+      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
         <select value={item.status} onChange={e => atualizar('status', e.target.value)}
           style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', background: status.bg, color: status.cor, width: '100%' }}>
-          {Object.entries(statusGutConfig).map(([v, c]) => <option key={v} value={v}>{c.label}</option>)}
+          {Object.entries(STATUS_GUT_CONFIG).map(([v, c]) => <option key={v} value={v}>{c.label}</option>)}
         </select>
       </td>
       <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
@@ -754,7 +752,8 @@ function AbaAcoes({ cliente, isLC }: { cliente: Cliente; isLC: boolean }) {
                   <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 46 }}>U</th>
                   <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 46 }}>T</th>
                   <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 60 }}>GUT</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 140 }}>Status</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 100 }}>Prioridade</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 150 }}>Status</th>
                   <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e5e7eb', width: 160 }}>Responsável</th>
                   {isLC && <th style={{ padding: '8px 10px', borderBottom: '1px solid #e5e7eb', width: 36 }} />}
                 </tr>

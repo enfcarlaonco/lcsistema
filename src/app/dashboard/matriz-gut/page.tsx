@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { CheckCircle, ChevronRight } from 'lucide-react'
+import { corGUT, bgGUT, prioridadeGut, STATUS_GUT_CONFIG } from '@/lib/matriz-gut'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -21,14 +22,11 @@ interface MatrizGutItem {
   cliente: { id: string; nome: string }
 }
 
-const statusConfig: Record<string, { label: string; cor: string; bg: string }> = {
-  PENDENTE:     { label: 'Pendente',     cor: '#4b5563', bg: '#f3f4f6' },
-  EM_ANDAMENTO: { label: 'Em andamento', cor: '#1d4ed8', bg: '#eff6ff' },
-  CONCLUIDO:    { label: 'Concluído',    cor: '#15803d', bg: '#f0fdf4' },
-}
+const STATUS_FECHADOS = ['FINALIZADO', 'CANCELADO']
 
-function corGUT(gut: number) { return gut >= 60 ? '#b91c1c' : gut >= 27 ? '#92400e' : '#1d4ed8' }
-function bgGUT(gut: number)  { return gut >= 60 ? '#fef2f2' : gut >= 27 ? '#fef3c7' : '#eff6ff' }
+function statusInfo(status: string) {
+  return STATUS_GUT_CONFIG[status] ?? { label: status, cor: '#6b7280', bg: '#f3f4f6' }
+}
 
 // ─── Página ─────────────────────────────────────────────────────────────────
 
@@ -54,16 +52,16 @@ export default function MatrizGutPage() {
   useEffect(() => { carregar() }, [])
 
   const itensFiltrados = itens.filter(i => {
-    if (filtroStatus === 'ABERTOS') return i.status !== 'CONCLUIDO'
+    if (filtroStatus === 'ABERTOS') return !STATUS_FECHADOS.includes(i.status)
     if (filtroStatus === 'TODOS') return true
     return i.status === filtroStatus
   })
 
   const resumo = {
     total: itens.length,
-    criticos: itens.filter(i => i.gut_score >= 60 && i.status !== 'CONCLUIDO').length,
+    criticos: itens.filter(i => i.gut_score >= 61 && !STATUS_FECHADOS.includes(i.status)).length,
     andamento: itens.filter(i => i.status === 'EM_ANDAMENTO').length,
-    concluidos: itens.filter(i => i.status === 'CONCLUIDO').length,
+    finalizados: itens.filter(i => i.status === 'FINALIZADO').length,
   }
 
   return (
@@ -80,9 +78,9 @@ export default function MatrizGutPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '1.5rem' }}>
         {[
           { label: 'Total de itens', val: resumo.total, cor: '#1e40af', bg: '#eff6ff' },
-          { label: 'Críticos em aberto (GUT ≥ 60)', val: resumo.criticos, cor: '#b91c1c', bg: '#fef2f2' },
+          { label: 'Alta/Muito alta em aberto (GUT ≥ 61)', val: resumo.criticos, cor: '#b91c1c', bg: '#fef2f2' },
           { label: 'Em andamento', val: resumo.andamento, cor: '#1d4ed8', bg: '#eff6ff' },
-          { label: 'Concluídos', val: resumo.concluidos, cor: '#15803d', bg: '#f0fdf4' },
+          { label: 'Finalizados', val: resumo.finalizados, cor: '#15803d', bg: '#f0fdf4' },
         ].map(c => (
           <div key={c.label} style={{ padding: '14px', background: c.bg, borderRadius: 'var(--border-radius-lg)', border: `1px solid ${c.cor}22` }}>
             <p style={{ fontSize: '22px', fontWeight: 500, color: c.cor }}>{c.val}</p>
@@ -93,7 +91,7 @@ export default function MatrizGutPage() {
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '4px', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {['ABERTOS', 'TODOS', 'PENDENTE', 'EM_ANDAMENTO', 'CONCLUIDO'].map(s => (
+        {['ABERTOS', 'TODOS', ...Object.keys(STATUS_GUT_CONFIG)].map(s => (
           <button key={s} onClick={() => setFiltroStatus(s)} style={{
             padding: '5px 10px', borderRadius: 'var(--border-radius-md)', fontSize: '11px',
             border: `1px solid ${filtroStatus === s ? '#1e40af' : 'var(--color-border-tertiary)'}`,
@@ -101,7 +99,7 @@ export default function MatrizGutPage() {
             color: filtroStatus === s ? '#1e40af' : 'var(--color-text-secondary)',
             cursor: 'pointer', fontWeight: filtroStatus === s ? 500 : 400,
           }}>
-            {s === 'ABERTOS' ? 'Em aberto' : s === 'TODOS' ? 'Todos' : statusConfig[s]?.label ?? s}
+            {s === 'ABERTOS' ? 'Em aberto' : s === 'TODOS' ? 'Todos' : STATUS_GUT_CONFIG[s]?.label ?? s}
           </button>
         ))}
       </div>
@@ -117,7 +115,8 @@ export default function MatrizGutPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {itensFiltrados.map(item => {
-            const status = statusConfig[item.status] ?? statusConfig.PENDENTE
+            const status = statusInfo(item.status)
+            const prioridade = prioridadeGut(item.gut_score)
             return (
               <Link
                 key={item.id}
@@ -156,6 +155,9 @@ export default function MatrizGutPage() {
                   </div>
                   <span style={{ fontSize: '13px', fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: bgGUT(item.gut_score), color: corGUT(item.gut_score) }}>
                     {item.gut_score}
+                  </span>
+                  <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '999px', background: prioridade.bg, color: prioridade.cor }}>
+                    {prioridade.label}
                   </span>
                   <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '999px', background: status.bg, color: status.cor }}>
                     {status.label}

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { STATUS_GUT_DEFAULT } from '@/lib/matriz-gut'
 
 export async function GET(req: NextRequest) {
   try {
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
         responsavel: responsavel ?? null,
         prazo_acao: prazo_acao ? new Date(prazo_acao) : null,
         observacoes: observacoes ?? null,
+        status: STATUS_GUT_DEFAULT,
         origem: 'MANUAL',
         nc_id: nc_id ?? null,
         documento_ref_id: documento_ref_id ?? null,
